@@ -131,8 +131,9 @@ def main(opt):
                     cv2.waitKey(1)
 
                 out.write(imgs[i])
+                cv2.imwrite('{}/{}.png'.format(d_save_dir, count), imgs[i])
                 print('{} cx: 0  cy: 0'.format(count))
-                
+
             else:
                 pred_img = cv2.resize(y_preds[i], (w, h), interpolation=cv2.INTER_AREA)
 
