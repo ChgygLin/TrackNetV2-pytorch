@@ -174,7 +174,7 @@ if __name__ == "__main__":
         os.makedirs('./runs/loader_test')
 
     batch_size = 1
-    test_loader = create_dataloader("./dataset/match2/images/1_10_12", batch_size=batch_size)
+    test_loader = create_dataloader("./example_dataset/match/images/1_10_12", batch_size=batch_size)
 
     for index, (_images,_heatmaps) in enumerate(test_loader):
         jj = 0

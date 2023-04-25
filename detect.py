@@ -43,10 +43,10 @@ def get_ball_position(img, original_img_=None):
 def parse_opt():
     parser = ArgumentParser()
 
-    parser.add_argument('--source', type=str, default=ROOT / 'dataset/match2/videos/1_10_12.mp4', help='Path to video.')
+    parser.add_argument('--source', type=str, default=ROOT / 'example_dataset/match/videos/1_10_12.mp4', help='Path to video.')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.csv')
     parser.add_argument('--view-img', action='store_true', help='show results')
-    parser.add_argument('--weights', type=str, default=ROOT / 'best.pth', help='Path to trained model weights.')
+    parser.add_argument('--weights', type=str, default=ROOT / 'best.pt', help='Path to trained model weights.')
     parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
 
     opt = parser.parse_args()
@@ -106,7 +106,7 @@ def main(opt):
             break
 
         imgs_torch = []
-        for img in imgs:         
+        for img in imgs:
             img_torch = torch.tensor(img).permute(2, 0, 1).float().to(device) / 255.0
             img_torch = torchvision.transforms.functional.resize(img_torch, imgsz, antialias=True)
             imgs_torch.append(img_torch)
@@ -135,7 +135,6 @@ def main(opt):
                 
             else:
                 pred_img = cv2.resize(y_preds[i], (w, h), interpolation=cv2.INTER_AREA)
-                cv2.imwrite('{}/{}.png'.format(d_save_dir, count), pred_img)
 
                 # x, y, w, h = get_ball_position(pred_frame, original_img_=frames[i])
                 (cnts, _) = cv2.findContours(pred_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -161,6 +160,7 @@ def main(opt):
                     cv2.waitKey(1)
 
                 out.write(imgs[i])
+                cv2.imwrite('{}/{}.png'.format(d_save_dir, count), imgs[i])
                 print("{} cx: {}  cy: {}".format(count, target[0], target[1]))
 
 
