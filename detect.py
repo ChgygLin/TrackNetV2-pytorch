@@ -60,8 +60,9 @@ def main(opt):
     source_name = os.path.splitext(os.path.basename(opt.source))[0]
     b_save_txt = opt.save_txt
     b_view_img = opt.view_img
-    d_save_dir = opt.project
-    f_weights = opt.weights
+    d_save_dir = str(opt.project)
+    f_weights = str(opt.weights)
+    f_source = str(opt.source)
 
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
@@ -72,7 +73,7 @@ def main(opt):
     model.load_state_dict(torch.load(f_weights))
     model.eval()
 
-    vid_cap = cv2.VideoCapture(opt.source)
+    vid_cap = cv2.VideoCapture(f_source)
     video_end = False
 
     video_len = vid_cap.get(cv2.CAP_PROP_FRAME_COUNT)

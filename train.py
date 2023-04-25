@@ -112,7 +112,7 @@ def training_loop(device, model, optimizer, train_loader, val_loader, epochs, sa
 def parse_opt():
     parser = ArgumentParser()
 
-    parser.add_argument('--dataset', type=str, default='example_dataset/match/images/1_10_12', help='Path to dataset.')
+    parser.add_argument('--dataset', type=str, default=ROOT / 'example_dataset/match/images/1_10_12', help='Path to dataset.')
     parser.add_argument('--weights', type=str, default=ROOT / 'best.pt', help='Path to trained model weights.')
     parser.add_argument('--epochs', type=int, default=100, help='total training epochs')
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
@@ -123,11 +123,11 @@ def parse_opt():
 
 
 def main(opt):
-    d_save_dir = opt.project
-    f_weights = opt.weights
+    d_save_dir = str(opt.project)
+    f_weights = str(opt.weights)
     epochs = opt.epochs
     batch_size = opt.batch_size
-    d_dataset = opt.dataset
+    d_dataset = str(opt.dataset)
 
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
