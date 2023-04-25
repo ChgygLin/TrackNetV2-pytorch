@@ -108,8 +108,12 @@ def main(opt):
 
         imgs_torch = []
         for img in imgs:
-            img_torch = torch.tensor(img).permute(2, 0, 1).float().to(device) / 255.0
+            # https://www.geeksforgeeks.org/converting-an-image-to-a-torch-tensor-in-python/
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            img_torch = torchvision.transforms.ToTensor()(img).to(device)   # already [0, 1]
             img_torch = torchvision.transforms.functional.resize(img_torch, imgsz, antialias=True)
+
             imgs_torch.append(img_torch)
 
         imgs_torch = torch.cat(imgs_torch, dim=0).unsqueeze(0)
