@@ -122,5 +122,5 @@ class TrackNet(nn.Module):
 
 if __name__ == '__main__':
     model = TrackNet()
-    print(summary(model,(9, 512, 288), device="cpu"))
+    print(summary(model,(9, 288, 512), device="cpu"))
     #print(model)

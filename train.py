@@ -136,6 +136,7 @@ def main(opt):
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
 
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = TrackNet().to(device)
     model.load_state_dict(torch.load(f_weights))
@@ -144,6 +145,7 @@ def main(opt):
 
     train_loader = create_dataloader(train_path, batch_size=batch_size, shuffle=True)
     val_loader = create_dataloader(val_path, batch_size=batch_size)
+
 
     training_loop(device, model, optimizer, train_loader, val_loader, epochs, d_save_dir)
 
