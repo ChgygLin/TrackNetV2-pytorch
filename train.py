@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 
 from models.tracknet import TrackNet
 from utils.dataloaders import create_dataloader
+from utils.general import check_dataset
 
 
 # from yolov5 detect.py
@@ -112,7 +113,7 @@ def training_loop(device, model, optimizer, train_loader, val_loader, epochs, sa
 def parse_opt():
     parser = ArgumentParser()
 
-    parser.add_argument('--dataset', type=str, default=ROOT / 'example_dataset/match/images/1_10_12', help='Path to dataset.')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/match/test.yaml', help='Path to dataset.')
     parser.add_argument('--weights', type=str, default=ROOT / 'best.pt', help='Path to trained model weights.')
     parser.add_argument('--epochs', type=int, default=100, help='total training epochs')
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
@@ -127,7 +128,10 @@ def main(opt):
     f_weights = str(opt.weights)
     epochs = opt.epochs
     batch_size = opt.batch_size
-    d_dataset = str(opt.dataset)
+    f_data = str(opt.data)
+
+    data_dict = check_dataset(f_data)
+    train_path, val_path = data_dict['train'], data_dict['val']
 
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
@@ -136,13 +140,10 @@ def main(opt):
     model = TrackNet().to(device)
     model.load_state_dict(torch.load(f_weights))
 
-    optimizer = torch.optim.Adadelta(model.parameters(), lr=0.05)
+    optimizer = torch.optim.Adadelta(model.parameters(), lr=0.1)
 
-    # da = []                                                                                      │    │
-    # da.append("../dataset/match2/images/1_10_12")
-
-    train_loader = create_dataloader(d_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = create_dataloader(d_dataset, batch_size=batch_size)
+    train_loader = create_dataloader(train_path, batch_size=batch_size, shuffle=True)
+    val_loader = create_dataloader(val_path, batch_size=batch_size)
 
     training_loop(device, model, optimizer, train_loader, val_loader, epochs, d_save_dir)
 
