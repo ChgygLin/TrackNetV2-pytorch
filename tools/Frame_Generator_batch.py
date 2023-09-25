@@ -1,3 +1,6 @@
+# 将一个目录下所有的视频依次分解成图像帧, 自动创建同级images目录
+# python Frame_Generator_batch.py Test/match1/videos
+
 import cv2
 import csv
 import os
@@ -5,37 +8,28 @@ import sys
 import shutil
 from glob import glob
 
-# dataset/videos/*.mp4		---->	dataset/images/1/*.jpg
-#									dataset/images/2/*.jpg
+from Frame_Generator import extract_video
+
+# Test/match1/videos/1_05_02.mp4		---->	Test/match1/images/1_05_02/*.jpg
+# Test/match1/videos/1_05_02.mp4		---->	Test/match1/images/1_05_02/*.jpg
 #											...
 
-match = 'dataset'
-p = os.path.join(match, 'videos', '*mp4')
-video_list = glob(p)
 
-if not os.path.exists(match + '/images/'):
-	os.makedirs(match + '/images/')
+def extract_videos(videosPath):
+	for filePath in glob(os.path.join(videosPath, '*mp4')):
+		tmp, _ = os.path.splitext(filePath)					# Test/match1/videos/1_05_02.mp4 ---> Test/match1/videos/1_05_02
+		imagePath = tmp.replace('videos', 'images')				# Test/match1/videos/1_05_02	 ---> Test/match1/images/1_05_02
 
-if not os.path.exists(match + '/labels/'):
-	os.makedirs(match + '/labels/')
+		extract_video(filePath, imagePath)
 
-for video_path in video_list:
-	videos_dir = os.path.join(match, 'videos')
-	video_name = video_path[len(videos_dir)+1:-4]
 
-	outputPath = os.path.join(match, 'images', video_name)
-	outputPath += '/'
+if __name__ == "__main__":
+	try:
+		videosPath = sys.argv[1]
+		if not videosPath:
+			raise ''
+	except:
+		print('usage: python3 Frame_Generator.py <videosPath>')
+		exit(1)
 
-	if not os.path.exists(outputPath):
-		os.makedirs(outputPath)
-
-	cap = cv2.VideoCapture(video_path)
-	success, count = True, 0
-	success, image = cap.read()
-
-	while success:
-		cv2.imwrite(outputPath + '%d.jpg' %(count), image)
-		count += 1
-		print("{}: {}".format(video_path, count))
-		success, image = cap.read()
-
+	extract_videos(videosPath)
