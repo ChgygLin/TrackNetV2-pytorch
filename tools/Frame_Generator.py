@@ -36,6 +36,7 @@ if __name__ == "__main__":
 		print('usage: python3 Frame_Generator.py <filePath> <outputFolder>')
 		exit(1)
 
+
 	extract_video(filePath, outputPath)
 
 

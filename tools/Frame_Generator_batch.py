@@ -1,11 +1,8 @@
 # 将一个目录下所有的视频依次分解成图像帧, 自动创建同级images目录
 # python Frame_Generator_batch.py Test/match1/videos
 
-import cv2
-import csv
 import os
 import sys
-import shutil
 from glob import glob
 
 from Frame_Generator import extract_video
@@ -31,5 +28,6 @@ if __name__ == "__main__":
 	except:
 		print('usage: python3 Frame_Generator.py <videosPath>')
 		exit(1)
+
 
 	extract_videos(videosPath)
