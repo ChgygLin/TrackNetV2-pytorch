@@ -26,6 +26,22 @@ def create_dataloader(path,
 
     return DataLoader(dataset, batch_size=batch_size, num_workers=nw, shuffle=shuffle) 
 
+# assert match/images exist, return path/images/xxx list
+def get_match_image_list(match_path):
+    base_images = os.path.join(match_path, "images")
+    assert os.path.exists(base_images), base_images+" is invalid"
+
+    image_dir_list = [f.path for f in os.scandir(base_images) if f.is_dir()]
+    return image_dir_list
+
+# return all match image list
+def get_rally_image_list(rally_path):
+    image_dir_list = []
+
+    for match_name in os.listdir(rally_path):
+        image_dir_list.extend(get_match_image_list(os.path.join(rally_path, match_name)))
+
+    return image_dir_list
 
 class LoadImagesAndLabels(Dataset):
     def __init__(self, 
@@ -51,24 +67,24 @@ class LoadImagesAndLabels(Dataset):
         # match : "./dataset1/match2"
         # match list : ["./dataset1/match1", "./dataset1/match2"]
 
+        # rally : "Professional"
+        # rally list : ["Amateur", "Professional"]
+
         for p in path if isinstance(path, list) else [path]:
             if p[-1] == '/':
                 p = p[:-1]
 
-            if "images" in p:   
+            if "images" in p:   # image 
                 self.image_dir_list.append(p)
-            else:
-                # 判断该目录下是否存在images目录
-                base_images = p+"/images"
-                if os.path.exists(base_images):
-                    # 将该match下面所有的image目录全部添加进来
-                    self.image_dir_list = [f.path for f in os.scandir(base_images) if f.is_dir()]
-                    print(self.image_dir_list)
-                else:
-                    raise FileNotFoundError( "{} does not exist".format(base_images))
+            elif "match" in p:  # match
+                self.image_dir_list.extend(get_match_image_list(p))
+            else:               # rally
+                self.image_dir_list.extend(get_rally_image_list(p))
+
 
             # 校验csv标签长度和img目录文件数量是否一致
         
+        print(self.image_dir_list)
 
         # TODO::::::::
         # Check cache
