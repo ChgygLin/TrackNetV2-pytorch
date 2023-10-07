@@ -21,6 +21,29 @@ python detect.py --source xxx.mp4 --weights  ./tf2torch/track.pt --view-img
 
 
 
+## Inference:
+
+```
+python detect.py --source xxx.mp4 --weights  xxx.pt --view-img
+```
+
+
+
+## Training:
+
+```
+# training from scratch
+python train.py --data data/match.yaml
+
+# training from pretrain weight
+python train.py --weights xxx.pt --data data/match.yaml
+
+# resume training
+python train.py --data data/match.yaml --resume
+```
+
+
+
 参考代码：
 
 https://github.com/mareksubocz/TrackNet
