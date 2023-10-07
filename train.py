@@ -108,7 +108,7 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
         print('lr: {}'.format(lr_scheduler.get_last_lr()))
         lr_scheduler.step()
 
-        if epoch%1 == 0:
+        if epoch%10 == 0:
             ckpt_dir = '{}/checkpoint'.format(save_dir)
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
