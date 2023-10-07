@@ -47,7 +47,7 @@ python train.py --data data/match.yaml --resume
 ## DataSet:
 
 ```
-# tracknet dataset
+# TrackNetV2 dataset
 #	/home/chg/Badminton/TrackNetV2
 #	- Amateur  
 #	- Professional  
@@ -60,13 +60,25 @@ python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Professional
 python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Test
 
 
-# dataset config : data/match.yaml
+# TrackNetV2 dataset config : data/match.yaml
 path: /home/chg/Documents/Badminton/TrackNetV2
 train:
     - Amateur
     - Professional 
 val:
     - Test
+    
+# also you can use follow config for testing
+train:
+    - Test/match1/images/1_05_02
+val:
+    - Test/match2/images/1_03_03
+
+# or
+train:
+    - Test/match1
+val:
+    - Test/match2
 
 ```
 
