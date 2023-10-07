@@ -44,6 +44,34 @@ python train.py --data data/match.yaml --resume
 
 
 
+## DataSet:
+
+```
+# tracknet dataset
+#	/home/chg/Badminton/TrackNetV2
+#	- Amateur  
+#	- Professional  
+#	- Test
+
+python tools/handle_tracknet_dataset.py /home/chg/Badminton/TrackNetV2
+
+python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Amateur
+python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Professional
+python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Test
+
+
+# dataset config : data/match.yaml
+path: /home/chg/Documents/Badminton/TrackNetV2
+train:
+    - Amateur
+    - Professional 
+val:
+    - Test
+
+```
+
+
+
 参考代码：
 
 https://github.com/mareksubocz/TrackNet
