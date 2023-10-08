@@ -1,22 +1,22 @@
 # TrackNetV2-pytorch
 
-论文:	**TrackNetV2: Efﬁcient Shuttlecock Tracking Network**
+Paper:	**TrackNetV2: Efﬁcient Shuttlecock Tracking Network**
 
-官方代码（tensorflow版）:	https://nol.cs.nctu.edu.tw:234/open-source/TrackNetv2
+Original Project（tensorflow）:	https://nol.cs.nctu.edu.tw:234/open-source/TrackNetv2
 
 > <del>官方上传的标注工具、数据集均已失效。</del>del>
 >
-> 目前原作者已重新上传数据集。
+> The author has now reuploaded the dataset。
 
-论文解析：[TrackNetV2论文记录与pytorch复现](https://zhuanlan.zhihu.com/p/624900770)
+Paper reading：[TrackNetV2论文记录与pytorch复现](https://zhuanlan.zhihu.com/p/624900770)
 
 
 
-使用tensorflow转换的pytorch权重(转换方法详见上文)
+## Inference with pytorch weights converted from tensorflow weights:
 
 ```shell
 git apply tf2torch/diff.txt
-python detect.py --source xxx.mp4 --weights  ./tf2torch/track.pt --view-img
+python detect.py --source xxx.mp4 --weights  ./tf2torch/track.pt --view-img		# TrackNetv2/3_in_3_out/model906_30
 ```
 
 
@@ -53,11 +53,13 @@ python train.py --data data/match.yaml --resume
 #	- Professional  
 #	- Test
 
-python tools/handle_tracknet_dataset.py /home/chg/Badminton/TrackNetV2
+python tools/handle_tracknet_dataset.py /home/chg/Badminton/TrackNetV2/Amateur
+python tools/handle_tracknet_dataset.py /home/chg/Badminton/TrackNetV2/Professional
+python tools/handle_tracknet_dataset.py /home/chg/Badminton/TrackNetV2/Test
 
-python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Amateur
-python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Professional
-python Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Test
+python tools/Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Amateur
+python tools/Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Professional
+python tools/Frame_Generator_rally.py /home/chg/Badminton/TrackNetV2/Test
 
 
 # TrackNetV2 dataset config : data/match.yaml
@@ -84,7 +86,7 @@ val:
 
 
 
-参考代码：
+## Reference：
 
 https://github.com/mareksubocz/TrackNet
 
