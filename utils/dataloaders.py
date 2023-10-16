@@ -144,7 +144,7 @@ class LoadImagesAndLabels(Dataset):
         images = []
 
         for i in range(self.sq):
-            image_path = image_dir + "/" + str(image_rel_index) + ".jpg"
+            image_path = image_dir + "/" + str(image_rel_index+i) + ".jpg"
             img = torchvision.io.read_image(image_path)
 
             img = torchvision.transforms.functional.resize(img, self.imgsz, antialias=True)
