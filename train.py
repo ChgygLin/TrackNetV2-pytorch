@@ -161,9 +161,10 @@ def main(opt):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = TrackNet().to(device)
 
-    optimizer = torch.optim.Adadelta(model.parameters(), lr=0.1)
+    optimizer = torch.optim.Adadelta(model.parameters(), lr=0.99)
 
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=epochs)
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=epochs)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.9)
 
     if opt.resume:
         default_ckpt = "{}/checkpoint/ckpt_latest.pt".format(d_save_dir)
