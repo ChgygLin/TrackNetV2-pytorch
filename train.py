@@ -38,7 +38,7 @@ def validation_loop(device, model, val_loader):
             y_pred = model(X)
 
             loss_sum += wbce_loss(y, y_pred).item()
-            pbar.set_description('Val   loss: {:.6f}'.format(loss_sum / (batch_index+1)))
+            pbar.set_description('Val   loss: {:.6f}'.format(loss_sum / ((batch_index+1)*X.shape[0])))
 
     return loss_sum/len(val_loader)
 
@@ -72,7 +72,7 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
             optimizer.step()
 
             running_loss += loss.item()
-            pbar.set_description('Train loss: {:.6f}'.format(running_loss / (batch_index+1)))
+            pbar.set_description('Train loss: {:.6f}'.format(running_loss / ((batch_index+1)*X.shape[0])))
 
             if batch_index % log_period == 0:
                 with torch.inference_mode():
