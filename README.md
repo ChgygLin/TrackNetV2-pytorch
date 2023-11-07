@@ -44,6 +44,16 @@ python train.py --data data/match.yaml --resume
 
 
 
+## Evaluation:
+
+```shell
+python val.py --weights xxx.pt --data data/match.yaml
+```
+
+
+
+
+
 ## DataSet:
 
 ```
