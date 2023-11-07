@@ -84,12 +84,14 @@ class LoadImagesAndLabels(Dataset):
 
             # 校验csv标签长度和img目录文件数量是否一致
         
+        print("\n")
         print(self.image_dir_list)
 
         # TODO::::::::
         # Check cache
 
         # 读取csv
+        print("\n")
         for csv_path in self.image_dir_list:
             label_path = "{}.{}".format(csv_path.replace('images', 'labels'), "csv")
             self.label_path_list.append(label_path)
@@ -100,6 +102,7 @@ class LoadImagesAndLabels(Dataset):
             self.lens.append(df_len - self.sq + 1)
             self.df_list.append(df)
             print("{} len: {}".format(csv_path, df_len))
+        print("\n")
 
     def __len__(self):
         return sum(self.lens)
