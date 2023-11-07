@@ -155,19 +155,19 @@ def main(opt):
                         max_area = area
 
                 target = rects[max_area_idx]
-
+                (cx_pred, cy_pred) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
 
                 if b_save_txt:
-                    f_save_txt.write('{},1,{},{}\n'.format(count, target[0]/w, target[1]/h))
+                    f_save_txt.write('{},1,{},{}\n'.format(count, cx_pred, cy_pred))
                 
                 if b_view_img:
-                    cv2.circle(imgs[i], (target[0], target[1]), 8, (0,0,255), -1)
+                    cv2.circle(imgs[i], (cx_pred, cy_pred), 8, (0,0,255), -1)
                     cv2.imshow(source_name, imgs[i])
                     cv2.waitKey(1)
 
                 out.write(imgs[i])
                 cv2.imwrite('{}/{}.png'.format(d_save_dir, count), imgs[i])
-                print("{} cx: {}  cy: {}".format(count, target[0], target[1]))
+                print("{} cx: {}  cy: {}".format(count, cx_pred, cy_pred))
 
 
             count += 1
