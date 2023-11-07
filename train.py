@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 
 from models.tracknet import TrackNet
 from utils.dataloaders import create_dataloader
-from utils.general import check_dataset
+from utils.general import check_dataset, outcome, evaluation
 
 
 # from yolov5 detect.py
@@ -30,15 +30,33 @@ def wbce_loss(y_true, y_pred):
 
 def validation_loop(device, model, val_loader):
     model.eval()
+
     loss_sum = 0
+    TP = TN = FP1 = FP2 = FN = 0
+
     with torch.inference_mode():
-        pbar = tqdm(val_loader, ncols=100)
+        pbar = tqdm(val_loader, ncols=180)
         for batch_index, (X, y) in enumerate(pbar):
             X, y = X.to(device), y.to(device)
             y_pred = model(X)
 
             loss_sum += wbce_loss(y, y_pred).item()
-            pbar.set_description('Val   loss: {:.6f}'.format(loss_sum / ((batch_index+1)*X.shape[0])))
+
+            y_ = y.detach().cpu().numpy()
+            y_pred_ = y_pred.detach().cpu().numpy()
+
+            y_pred_ = (y_pred_ > 0.5).astype('float32')
+            (tp, tn, fp1, fp2, fn) = outcome(y_pred_, y_)
+            TP += tp
+            TN += tn
+            FP1 += fp1
+            FP2 += fp2
+            FN += fn
+
+            (accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+
+            pbar.set_description('Val   loss: {:.6f}  |  TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}  |  Accuracy: {:.4f}, Precision: {:.4f}, Recall: {:.4f}'.format( \
+                loss_sum / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, accuracy, precision, recall))
 
     return loss_sum/len(val_loader)
 
@@ -57,9 +75,10 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
         print("\n==================================================================================================")
         tqdm.write("Epoch: {} / {}\n".format(epoch, epochs))
         running_loss = 0.0
+        TP = TN = FP1 = FP2 = FN = 0
 
         model.train()
-        pbar = tqdm(train_loader, ncols=100)
+        pbar = tqdm(train_loader, ncols=180)
         for batch_index, (X, y) in enumerate(pbar):
             X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
@@ -72,7 +91,22 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
             optimizer.step()
 
             running_loss += loss.item()
-            pbar.set_description('Train loss: {:.6f}'.format(running_loss / ((batch_index+1)*X.shape[0])))
+
+            y_ = y.detach().cpu().numpy()
+            y_pred_ = y_pred.detach().cpu().numpy()
+
+            y_pred_ = (y_pred_ > 0.5).astype('float32')
+            (tp, tn, fp1, fp2, fn) = outcome(y_pred_, y_)
+            TP += tp
+            TN += tn
+            FP1 += fp1
+            FP2 += fp2
+            FN += fn
+
+            (accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+
+            pbar.set_description('Train loss: {:.6f}  |  TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}  |  Accuracy: {:.4f}, Precision: {:.4f}, Recall: {:.4f}'.format( \
+                running_loss / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, accuracy, precision, recall))
 
             if batch_index % log_period == 0:
                 with torch.inference_mode():
