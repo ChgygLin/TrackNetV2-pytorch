@@ -60,6 +60,9 @@ def validation_loop(device, model, val_loader, save_dir):
             
             pbar.set_description('Val loss: {:.6f}  |  TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}  |  Accuracy: {:.4f}, Precision: {:.4f}, Recall: {:.4f}'.format( \
                 loss_sum / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, accuracy, precision, recall))
+    
+    F1 = 2 * (precision*recall) / (precision+recall)
+    print("F1-score: {}".format(F1))
 
     return loss_sum/len(val_loader)
 
