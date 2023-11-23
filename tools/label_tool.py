@@ -51,14 +51,20 @@ class VideoPlayer():
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.bitrate = self.cap.get(cv2.CAP_PROP_BITRATE)
 
+        # Check video lens!
         # ret, frame = self.cap.read()
         # frame_cnt = 1
         # while ret:
         #     ret, frame = self.cap.read()
         #     if ret:
         #         frame_cnt += 1
+        #     else:
+        #         print("Waringing: {} frame decode error!".format(frame_cnt))
         
-        # print(" self.frames: {}, frame_cnt: {} ".format(self.frames, frame_cnt))
+        # if self.frames != frame_cnt:
+        #     print(" self.frames: {}, frame_cnt: {} ".format(self.frames, frame_cnt))
+        #     self.frames = frame_cnt
+
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
 
@@ -84,18 +90,19 @@ class VideoPlayer():
             if len(self.info.index) != self.frames:
                 print("pd len: {}, camera len: {}".format(len(self.info.index), self.frames))
                 print("Number of frames in video and dictionary are not the same!")
-                print("Fail to load, create new dictionary instead.")
+                print("Fail to load!")
+                exit(1)
 
 
-                self.info = {'frame_num':[], 'visible':[], 'x':[], 'y':[]}
+                # self.info = {'frame_num':[], 'visible':[], 'x':[], 'y':[]}
 
-                for idx in range(self.frames):
-                    self.info['frame_num'].append(idx)
-                    self.info['visible'].append(0)
-                    self.info['x'].append(0)
-                    self.info['y'].append(0)
+                # for idx in range(self.frames):
+                #     self.info['frame_num'].append(idx)
+                #     self.info['visible'].append(0)
+                #     self.info['x'].append(0)
+                #     self.info['y'].append(0)
                 
-                print("pandas dataframe len: {}".format(len(self.info)))
+                # print("pandas dataframe len: {}".format(len(self.info)))
 
             else:
                 self.info = {k: list(v.values()) for k, v in self.info.to_dict().items()}
