@@ -46,6 +46,7 @@ def parse_opt():
     parser.add_argument('--source', type=str, default=ROOT / 'example_dataset/match/videos/1_10_12.mp4', help='Path to video.')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.csv')
     parser.add_argument('--view-img', action='store_true', help='show results')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[288, 512], help='image size h,w')
     parser.add_argument('--weights', type=str, default=ROOT / 'best.pt', help='Path to trained model weights.')
     parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
 
@@ -55,7 +56,8 @@ def parse_opt():
 
 
 def main(opt):
-    imgsz = [288, 512]
+    # imgsz = [288, 512]
+    # imgsz = [360, 640]
 
     source_name = os.path.splitext(os.path.basename(opt.source))[0]
     b_save_txt = opt.save_txt
@@ -63,6 +65,7 @@ def main(opt):
     d_save_dir = str(opt.project)
     f_weights = str(opt.weights)
     f_source = str(opt.source)
+    imgsz = opt.imgsz
 
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)

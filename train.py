@@ -168,6 +168,7 @@ def parse_opt():
     parser.add_argument('--data', type=str, default=ROOT / 'data/match/test.yaml', help='Path to dataset.')
     parser.add_argument('--weights', type=str, default=ROOT / 'best.pt', help='Path to trained model weights.')
     parser.add_argument('--epochs', type=int, default=100, help='total training epochs')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[288, 512], help='image size h,w')
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--project', default=ROOT / 'runs/train', help='save results to project/name')
     parser.add_argument('--resume', action='store_true', help='whether load checkpoint for resume')
@@ -182,6 +183,7 @@ def main(opt):
     epochs = opt.epochs
     batch_size = opt.batch_size
     f_data = str(opt.data)
+    imgsz = opt.imgsz
 
     start_epoch = 0
 
@@ -217,8 +219,8 @@ def main(opt):
         else:
             print("train from scratch")
 
-    train_loader = create_dataloader(train_path, batch_size=batch_size, shuffle=True)
-    val_loader = create_dataloader(val_path, batch_size=batch_size)
+    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, shuffle=True)
+    val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size)
 
 
     training_loop(device, model, optimizer, lr_scheduler, train_loader, val_loader, start_epoch, epochs, d_save_dir)

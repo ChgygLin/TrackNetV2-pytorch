@@ -73,6 +73,7 @@ def parse_opt():
 
     parser.add_argument('--data', type=str, default=ROOT / 'data/match/test.yaml', help='Path to dataset.')
     parser.add_argument('--weights', type=str, default=ROOT / 'best.pt', help='Path to trained model weights.')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[288, 512], help='image size h,w')
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--project', default=ROOT / 'runs/val', help='save results to project/name')
 
@@ -85,6 +86,7 @@ def main(opt):
     f_weights = str(opt.weights)
     batch_size = opt.batch_size
     f_data = str(opt.data)
+    imgsz = opt.imgsz
 
 
     data_dict = check_dataset(f_data)
@@ -102,10 +104,9 @@ def main(opt):
     model.load_state_dict(torch.load(f_weights))
 
 
-    val_loader = create_dataloader(val_path, batch_size=batch_size)
+    val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size)
 
     validation_loop(device, model, val_loader, d_save_dir)
-
 
 
 if __name__ == '__main__':

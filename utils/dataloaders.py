@@ -17,6 +17,8 @@ def create_dataloader(path,
                       sq=3,
                       workers=8,
                       shuffle=False):
+    print("create dataloader image size: {}".format(imgsz))
+
     dataset = LoadImagesAndLabels(path, imgsz, batch_size, sq)
 
     batch_size = min(batch_size, len(dataset))
