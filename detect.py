@@ -9,7 +9,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 from models.tracknet import TrackNet
-
+from utils.general import get_shuttle_position
 
 # from yolov5 detect.py
 FILE = Path(__file__).resolve()
@@ -67,8 +67,17 @@ def main(opt):
     f_source = str(opt.source)
     imgsz = opt.imgsz
 
+    # video_name ---> video_name_pred
+    source_name = '{}_predict'.format(source_name)
+
+    # runs/detect
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
+
+    # runs/detect/video_name
+    img_save_path = '{}/{}'.format(d_save_dir, source_name)
+    if not os.path.exists(img_save_path):
+        os.makedirs(img_save_path)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -130,54 +139,27 @@ def main(opt):
         y_preds = y_preds.astype('uint8')
 
         for i in range(3):
-            if np.amax(y_preds[i]) <= 0:
-                if b_save_txt:
-                    f_save_txt.write('{},0,0,0\n'.format(count))
+            (visible, cx_pred, cy_pred) = get_shuttle_position(y_preds[i])
+            (cx, cy) = (int(cx_pred*w/imgsz[1]), int(cy_pred*h/imgsz[0]))
+            if visible:
+                cv2.circle(imgs[i], (cx, cy), 8, (0,0,255), -1)
 
-                if b_view_img:
-                    cv2.imshow(source_name, imgs[i])
-                    cv2.waitKey(1)
+            if b_save_txt:
+                f_save_txt.write('{},{},{},{}\n'.format(visible, cx, cy))
 
-                out.write(imgs[i])
-                cv2.imwrite('{}/{}.png'.format(d_save_dir, count), imgs[i])
-                print('{} cx: 0  cy: 0'.format(count))
+            if b_view_img:
+                cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[i])
+                cv2.imshow(source_name, imgs[i])
+                cv2.waitKey(1)
 
-            else:
-                pred_img = cv2.resize(y_preds[i], (w, h), interpolation=cv2.INTER_AREA)
-
-                # x, y, w, h = get_ball_position(pred_frame, original_img_=frames[i])
-                (cnts, _) = cv2.findContours(pred_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                rects = [cv2.boundingRect(ctr) for ctr in cnts]
-                max_area_idx = 0
-                max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
-
-                for ii in range(len(rects)):
-                    area = rects[ii][2] * rects[ii][3]
-                    if area > max_area:
-                        max_area_idx = ii
-                        max_area = area
-
-                target = rects[max_area_idx]
-                (cx_pred, cy_pred) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
-
-                if b_save_txt:
-                    f_save_txt.write('{},1,{},{}\n'.format(count, cx_pred, cy_pred))
-                
-                if b_view_img:
-                    cv2.circle(imgs[i], (cx_pred, cy_pred), 8, (0,0,255), -1)
-                    cv2.imshow(source_name, imgs[i])
-                    cv2.waitKey(1)
-
-                out.write(imgs[i])
-                cv2.imwrite('{}/{}.png'.format(d_save_dir, count), imgs[i])
-                print("{} cx: {}  cy: {}".format(count, cx_pred, cy_pred))
-
+            out.write(imgs[i])
+            print("{} ---- visible: {}  cx: {}  cy: {}".format(count, visible, cx, cy))
 
             count += 1
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-    
+
     if b_save_txt:
         # 每次识别3张，最后可能有1-2张没有识别，补0
         while count < video_len:

@@ -36,6 +36,33 @@ def check_dataset(data):
     return data
 
 
+# img: 0/1 binary image, numpy array.
+def get_shuttle_position(img):
+    if np.amax(img) <= 0:
+        # (visible, cx, cy)
+        return (0, 0, 0)
+
+    else:
+        (cnts, _) = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        assert (len(cnts) != 0)
+
+        rects = [cv2.boundingRect(ctr) for ctr in cnts]
+        max_area_idx = 0
+        max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
+
+        for ii in range(len(rects)):
+            area = rects[ii][2] * rects[ii][3]
+            if area > max_area:
+                max_area_idx = ii
+                max_area = area
+
+        target = rects[max_area_idx]
+        (cx, cy) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
+
+        # (visible, cx, cy)
+        return (1, cx, cy)
+
+
 def outcome(y_pred, y_true, tol=3): # [batch, 3, h, w]
     n = y_pred.shape[0]
     i = 0
@@ -54,31 +81,8 @@ def outcome(y_pred, y_true, tol=3): # [batch, 3, h, w]
                 h_pred = h_pred.astype('uint8')
                 h_true = h_true.astype('uint8')
 
-                #h_pred
-                (cnts, _) = cv2.findContours(h_pred.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                rects = [cv2.boundingRect(ctr) for ctr in cnts]
-                max_area_idx = 0
-                max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
-                for j in range(len(rects)):
-                    area = rects[j][2] * rects[j][3]
-                    if area > max_area:
-                        max_area_idx = j
-                        max_area = area
-                target = rects[max_area_idx]
-                (cx_pred, cy_pred) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
-
-                #h_true
-                (cnts, _) = cv2.findContours(h_true.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                rects = [cv2.boundingRect(ctr) for ctr in cnts]
-                max_area_idx = 0
-                max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
-                for j in range(len(rects)):
-                    area = rects[j][2] * rects[j][3]
-                    if area > max_area:
-                        max_area_idx = j
-                        max_area = area
-                target = rects[max_area_idx]
-                (cx_true, cy_true) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
+                (_, cx_pred, cy_pred) = get_shuttle_position(h_pred)
+                (_, cx_true, cy_true) = get_shuttle_position(h_true)
 
                 dist = np.sqrt(pow(cx_pred-cx_true, 2)+pow(cy_pred-cy_true, 2))
 
