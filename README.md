@@ -52,6 +52,18 @@ python val.py --weights xxx.pt --data data/match.yaml
 
 
 
+## Deployment:
+
+```shell
+# Server
+python deploy/app.py --weights xxx.pt
+
+# Client
+python deploy/test_app.py
+```
+
+
+
 
 
 ## DataSet:
