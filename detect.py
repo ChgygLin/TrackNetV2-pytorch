@@ -19,27 +19,6 @@ if str(ROOT) not in sys.path:
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
-def get_ball_position(img, original_img_=None):
-    ret, thresh = cv2.threshold(img, 128, 1, 0)
-    thresh = cv2.convertScaleAbs(thresh)
-
-    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    print(len(contours))
-    if len(contours) != 0:
-
-        #find the biggest area of the contour
-        c = max(contours, key = cv2.contourArea)
-
-        if original_img_ is not None:
-            # the contours are drawn here
-            cv2.drawContours(original_img_, [c], -1, 255, 3)
-
-        x,y,w,h = cv2.boundingRect(c)
-        print("Center: ({}, {}) | Width: {} | Height: {}".format(x, y, w, h))
-        
-        return x, y, w, h
-
-
 def parse_opt():
     parser = ArgumentParser()
 
