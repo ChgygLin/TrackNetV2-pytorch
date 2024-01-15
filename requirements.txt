@@ -52,3 +52,4 @@ typing_extensions==4.8.0
 tzdata==2023.3
 urllib3==2.1.0
 Werkzeug==3.0.1
+tensorboardX==2.6.2.2

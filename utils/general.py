@@ -109,3 +109,18 @@ def evaluation(TP, TN, FP1, FP2, FN):
         recall = 0
 
     return (accuracy, precision, recall)
+
+def tensorboard_log(log_writer, type, avg_loss, TP, TN, FP1, FP2, FN,  epoch):
+    log_writer.add_scalar('{}/training_loss', type, avg_loss, epoch)
+    log_writer.add_scalar('{}/TP', type, TP, epoch)
+    log_writer.add_scalar('{}/TN', type, TN, epoch)
+    log_writer.add_scalar('{}/FP1', type, FP1, epoch)
+    log_writer.add_scalar('{}/FP2', type, FP2, epoch)
+    log_writer.add_scalar('{}/FN', type, FN, epoch)
+    log_writer.add_scalar('{}/TP', type, TP, epoch)
+
+    (accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+
+    log_writer.add_scalar('{}/Accuracy', type, accuracy, epoch)
+    log_writer.add_scalar('{}/precision', type, precision, epoch)
+    log_writer.add_scalar('{}/precision', type, precision, epoch)

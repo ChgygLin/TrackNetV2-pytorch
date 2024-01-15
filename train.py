@@ -7,10 +7,11 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 from argparse import ArgumentParser
+from tensorboardX import SummaryWriter
 
 from models.tracknet import TrackNet
 from utils.dataloaders import create_dataloader
-from utils.general import check_dataset, outcome, evaluation
+from utils.general import check_dataset, outcome, evaluation, tensorboard_log
 
 
 # from yolov5 detect.py
@@ -28,7 +29,7 @@ def wbce_loss(y_true, y_pred):
     ).sum()
 
 
-def validation_loop(device, model, val_loader):
+def validation_loop(device, model, val_loader, log_writer, epoch):
     model.eval()
 
     loss_sum = 0
@@ -58,6 +59,8 @@ def validation_loop(device, model, val_loader):
             pbar.set_description('Val   loss: {:.6f}  |  TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}  |  Accuracy: {:.4f}, Precision: {:.4f}, Recall: {:.4f}'.format( \
                 loss_sum / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, accuracy, precision, recall))
 
+        tensorboard_log(log_writer, "Val", loss_sum / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, epoch)
+
     return loss_sum/len(val_loader)
 
 
@@ -71,6 +74,8 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
+    log_writer = SummaryWriter(log_dir)
+
     for epoch in range(start_epoch, epochs):
         print("\n==================================================================================================")
         tqdm.write("Epoch: {} / {}\n".format(epoch, epochs))
@@ -125,7 +130,7 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
 
         if val_loader is not None:
             best = False
-            val_loss = validation_loop(device, model, val_loader)
+            val_loss = validation_loop(device, model, val_loader, log_writer, epoch)
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 best = True
@@ -138,7 +143,8 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
                     tqdm.write('--- Saving weights to: {}/best.pt ---'.format(save_dir))
                     torch.save(model.state_dict(), '{}/best.pt'.format(save_dir))
 
-        
+        tensorboard_log(log_writer, "Train", running_loss / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, epoch)
+
         print('lr: {}'.format(lr_scheduler.get_last_lr()))
         lr_scheduler.step()
 
