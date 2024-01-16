@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import os
 import cv2
+import json
 import pandas as pd
 import numpy as np
 
@@ -59,7 +60,7 @@ class LoadImagesAndLabels(Dataset):
 
         self.image_dir_list = []               # 所有的图片目录
         self.label_path_list = []               # 所有的样本路径，文件， 与image_dir_list的元素一一对应
-        self.df_list = []       # labels
+        self.label_data_list = []       # labels
         self.lens = []   # 总共的样本数量
 
 
@@ -94,17 +95,23 @@ class LoadImagesAndLabels(Dataset):
 
         # 读取csv
         print("\n")
-        for csv_path in self.image_dir_list:
-            label_path = "{}.{}".format(csv_path.replace('images', 'labels'), "csv")
+        for image_dir in self.image_dir_list:
+            label_path = "{}.{}".format(image_dir.replace('images', 'labels'), "json")
             self.label_path_list.append(label_path)
 
-            df = pd.read_csv(label_path)
-            df_len = len(df.index)
+            with open(label_path, 'r') as file:
+                label_data = json.load(file)           # 一个json文件保存一个图片目录的多张图片
+                label_data_len = len(label_data)
 
-            self.lens.append(df_len - self.sq + 1)
-            self.df_list.append(df)
-            print("{} len: {}".format(csv_path, df_len))
+                self.lens.append(label_data_len - self.sq + 1)     # 123 -> 234 -> 345
+                self.label_data_list.append(label_data)
+
+                print("{} len: {}".format(label_path, label_data_len))
+                # img_name = js_data[img_num]['image']
+                # kps = js_data[img_num]['kps']
+
         print("\n")
+
 
     def __len__(self):
         return sum(self.lens)
@@ -121,35 +128,24 @@ class LoadImagesAndLabels(Dataset):
 
         #print("sample {}  use label:{}  relative index: {}".format(index, self.label_path_list[ix], rel_index))
 
-        w = self.imgsz[1]
-        h = self.imgsz[0]
-        df = self.df_list[ix]
+        # 获取sq张图片
+        # images :      [sq][3][h][w]
+        # hms_kps:      [sq][32][h][w]
+        # images_kps:   [sq][32][x][y]
+        # images_name:  [sq]
+        images, hms_kps, images_kps, images_name = self._get_sample(self.image_dir_list[ix], self.label_data_list[ix], rel_index)
 
-        heatmaps = []
-
-        for iy in range(self.sq):
-            visible = df['visible'][rel_index+iy]
-            x = df['x'][rel_index+iy]
-            y = df['y'][rel_index+iy]
-
-            if visible == 0:
-                heatmap = self._gen_heatmap(w, h, -1, -1)
-            else:
-                heatmap = self._gen_heatmap(w, h, int(w*x), int(h*y))
-            
-            heatmaps.append(heatmap)
-
-        heatmaps = torch.tensor(np.array(heatmaps), requires_grad=False, dtype=torch.float32)
-        images = self._get_sample(self.image_dir_list[ix], rel_index)
-
-        return images, heatmaps
+        return images, hms_kps, images_kps, images_name
 
 
-    def _get_sample(self, image_dir, image_rel_index):
+    def _get_sample(self, image_dir, label_data, image_rel_index):
         images = []
+        hms_kps = []
+        images_kps = []
+        images_name = []
 
         for i in range(self.sq):
-            image_path = image_dir + "/" + str(image_rel_index+i) + ".jpg"
+            image_path = image_dir + "/" + label_data[image_rel_index+i]['image']
             img = torchvision.io.read_image(image_path)
 
             img = torchvision.transforms.functional.resize(img, self.imgsz, antialias=True)
@@ -157,7 +153,37 @@ class LoadImagesAndLabels(Dataset):
             img *= 1 / 255
             images.append(img)
 
-        return torch.concatenate(images)
+            w = self.imgsz[1]
+            h = self.imgsz[0]
+
+            # 32个点
+            kps_frac = label_data[image_rel_index]['kps']
+            assert len(kps_frac) == 32
+
+            hm_kps = np.zeros((len(kps_frac), h, w), dtype=np.float32)
+            kps_int = np.zeros((len(kps_frac), 2), dtype=np.uint) - [1, 1]
+
+            for i in range(len(kps_frac)):
+                if kps_frac[i][0] >=0 and kps_frac[i][1] >=0:
+                    x = int(kps_frac[i][0]*w)
+                    y = int(kps_frac[i][1]*h)
+
+                    kps_int[i] = [x, y]
+
+                    heatmap = self._gen_heatmap(w, h, x, y)
+                    hm_kps[i] = heatmap
+                else:
+                    heatmap = self._gen_heatmap(w, h, -1, -1)
+                    hm_kps[i] = heatmap
+
+            hms_kps.append(hm_kps)
+            images_kps.append(kps_int)
+            images_name.append(label_data[image_rel_index+i]['image'])
+
+        images = torch.concatenate(images)  # 平铺RGB维度
+        hms_kps = torch.tensor(np.array(hms_kps), requires_grad=False, dtype=torch.float32)
+
+        return images, hms_kps, images_kps, images_name
 
 
     def _gen_heatmap(self, w, h, cx, cy, r=2.5, mag=1):
@@ -195,26 +221,34 @@ if __name__ == "__main__":
         os.makedirs('./runs/loader_test')
 
     batch_size = 1
-    test_loader = create_dataloader("./example_dataset/match/images/1_10_12", batch_size=batch_size)
+    sq = 3
+    test_loader = create_dataloader("/home/chg/Documents/Badminton/CourtV1/match3/images/03", batch_size=batch_size, sq=sq)
 
-    for index, (_images,_heatmaps) in enumerate(test_loader):
-        jj = 0
-        # for jj in range(batch_size):
+    for index, (_images, _hms_kps, _, _) in enumerate(test_loader):
         hms = []
-        for ii in range(3):
-            hm = _heatmaps[jj,ii,:,:].repeat(3,1,1)              # 奇怪，为什么不用*255就能直接得到灰度图像
-            hms.append(hm)
+        for ii in range(sq):
+            # 叠加32张热力图
+            hm_kps = _hms_kps[0][ii]
+
+            heatmaps = np.zeros((3, hm_kps[0].shape[0], hm_kps[0].shape[1]), dtype=np.float32)
+            for heatmap in hm_kps:
+                heatmap = heatmap.repeat(3,1,1)
+                heatmaps = cv2.addWeighted(heatmaps, 1, np.array(heatmap), 1, gamma=0)
+
+            heatmaps = torch.tensor(np.array(heatmaps), requires_grad=False, dtype=torch.float32)
+            hms.append(heatmaps)
         # torchvision.utils.save_image(hms, './runs/loader_test/batch{}_{}_heatmap.png'.format(index, jj))
 
         ims = []
-        for ii in range(3):
-            im = _images[jj,(0+ii*3,1+ii*3,2+ii*3),:,:]          # 奇怪，为什么不用*255就能直接得到彩色图像
+        for ii in range(sq):
+            im = _images[0,(0+ii*3,1+ii*3,2+ii*3),:,:]
             ims.append(im)
             hms.append(im)
         # torchvision.utils.save_image(ims, './runs/loader_test/batch{}_{}_image.png'.format(index, jj))
 
-        hms = torchvision.utils.make_grid(hms, nrow=3)
-        torchvision.utils.save_image(hms, './runs/loader_test/batch{}_{}.png'.format(index, jj))
+        print(len(hms))
+        hms = torchvision.utils.make_grid(hms, nrow=sq)
+        torchvision.utils.save_image(hms, './runs/loader_test/batch{}_{}.png'.format(index, 0))
 
         if index >= 10:
             break
