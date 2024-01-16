@@ -37,7 +37,8 @@ def validation_loop(device, model, val_loader, log_writer, epoch):
 
     with torch.inference_mode():
         pbar = tqdm(val_loader, ncols=180)
-        for batch_index, (X, y) in enumerate(pbar):
+        for batch_index, (X, y, _, _) in enumerate(pbar):
+            y = y[:,0,:,:,:]    # [batch][sq][32][h][w]
             X, y = X.to(device), y.to(device)
             y_pred = model(X)
 
@@ -84,7 +85,8 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
 
         model.train()
         pbar = tqdm(train_loader, ncols=180)
-        for batch_index, (X, y) in enumerate(pbar):
+        for batch_index, (X, y, _, _) in enumerate(pbar):
+            y = y[:,0,:,:,:]    # [batch][sq][32][h][w]
             X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
 
@@ -225,8 +227,8 @@ def main(opt):
         else:
             print("train from scratch")
 
-    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, shuffle=True)
-    val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size)
+    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, sq=1, shuffle=True)
+    val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size, sq=1)
 
 
     training_loop(device, model, optimizer, lr_scheduler, train_loader, val_loader, start_epoch, epochs, d_save_dir)
