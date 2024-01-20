@@ -86,7 +86,7 @@ def main(opt):
     count = 0
     while vid_cap.isOpened():
         imgs = []
-        for _ in range(3):
+        for _ in range(1):
             ret, img = vid_cap.read()
 
             if not ret:
@@ -117,24 +117,24 @@ def main(opt):
         y_preds = y_preds*255
         y_preds = y_preds.astype('uint8')
 
-        for i in range(3):
+        for i in range(32):
             (visible, cx_pred, cy_pred) = get_shuttle_position(y_preds[i])
             (cx, cy) = (int(cx_pred*w/imgsz[1]), int(cy_pred*h/imgsz[0]))
             if visible:
-                cv2.circle(imgs[i], (cx, cy), 8, (0,0,255), -1)
+                cv2.circle(imgs[0], (cx, cy), 8, (0,0,255), -1)
 
-            if b_save_txt:
-                f_save_txt.write('{},{},{},{}\n'.format(visible, cx, cy))
+        if b_save_txt:
+            f_save_txt.write('{},{},{},{}\n'.format(visible, cx, cy))
 
-            if b_view_img:
-                cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[i])
-                cv2.imshow(source_name, imgs[i])
-                cv2.waitKey(1)
+        if b_view_img:
+            cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[0])
+            cv2.imshow(source_name, imgs[0])
+            cv2.waitKey(1)
 
-            out.write(imgs[i])
-            print("{} ---- visible: {}  cx: {}  cy: {}".format(count, visible, cx, cy))
+        out.write(imgs[0])
+        print("{} ---- visible: {}  cx: {}  cy: {}".format(count, visible, cx, cy))
 
-            count += 1
+        count += 1
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
