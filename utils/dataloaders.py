@@ -161,14 +161,15 @@ class LoadImagesAndLabels(Dataset):
             assert len(kps_frac) == 32
 
             hm_kps = np.zeros((len(kps_frac), h, w), dtype=np.float32)
-            kps_int = np.zeros((len(kps_frac), 2), dtype=np.uint) - [1, 1]
+            kps_int = np.zeros((len(kps_frac), 3), dtype=np.int32)
 
             for i in range(len(kps_frac)):
-                if kps_frac[i][0] >=0 and kps_frac[i][1] >=0:
+                # x, y, visible
+                if kps_frac[i][2]:
                     x = int(kps_frac[i][0]*w)
                     y = int(kps_frac[i][1]*h)
 
-                    kps_int[i] = [x, y]
+                    kps_int[i] = [x, y, 1]
 
                     heatmap = self._gen_heatmap(w, h, x, y)
                     hm_kps[i] = heatmap
