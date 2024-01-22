@@ -63,6 +63,19 @@ def get_shuttle_position(img):
         return (1, cx, cy)
 
 
+def visualize_kps(img, kps):    # x_int, y_int, visible
+    im = img.copy()
+
+    for index in range(len(kps)):
+        cx, cy, visible = kps[index][0], kps[index][1], kps[index][2]
+
+        if visible:
+            cv2.circle(im, (cx, cy), 3, (0,0,255), -1)
+
+    cv2.imshow("kps", im)
+    cv2.waitKey(1)
+
+
 def outcome(y_pred, y_true, tol=3): # [batch, 32, h, w]
     n = y_pred.shape[0]
     kps_len = y_pred.shape[1]

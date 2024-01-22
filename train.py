@@ -227,7 +227,7 @@ def main(opt):
         else:
             print("train from scratch")
 
-    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, sq=1, shuffle=True)
+    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, sq=1, augment=True, shuffle=True)    # augment: only True in training mode
     val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size, sq=1)
 
 

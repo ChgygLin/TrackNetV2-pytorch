@@ -9,6 +9,22 @@ import json
 import pandas as pd
 import numpy as np
 
+from utils.augmentations import random_perspective, Albumentations, augment_hsv, random_flip
+
+
+class ToTensor:
+    # YOLOv5 ToTensor class for image preprocessing
+    def __init__(self, half=False):
+        super().__init__()
+        self.half = half
+
+    def __call__(self, im):  # im = np.array HWC in BGR order
+        im = np.ascontiguousarray(im.transpose((2, 0, 1))[::-1])  # HWC to CHW -> BGR to RGB -> contiguous
+        im = torch.from_numpy(im)  # to torch
+        im = im.half() if self.half else im.float()  # uint8 to fp16/32
+        im /= 255.0  # 0-255 to 0.0-1.0
+        return im
+
 
 # num_workers   https://zhuanlan.zhihu.com/p/568076554
 # batch size 20    nw 1 ---> 1.35   nw 8 ---> 1.75
@@ -16,11 +32,12 @@ def create_dataloader(path,
                       imgsz=[288, 512],
                       batch_size=1,
                       sq=3,
+                      augment=False,
                       workers=8,
                       shuffle=False):
     print("create dataloader image size: {}".format(imgsz))
 
-    dataset = LoadImagesAndLabels(path, imgsz, batch_size, sq)
+    dataset = LoadImagesAndLabels(path, imgsz, batch_size, sq, augment)
 
     batch_size = min(batch_size, len(dataset))
     nd = torch.cuda.device_count()  # number of CUDA devices
@@ -52,11 +69,14 @@ class LoadImagesAndLabels(Dataset):
                  imgsz=[288, 512], 
                  batch_size=1,
                  sq=3,# 网络输入几张图
+                 augment=False,
                  ):
         self.imgsz = imgsz
         self.path = path
         self.batch_size = batch_size
         self.sq = sq
+        self.augment = augment
+        self.albumentations = Albumentations(imgsz) if augment else None
 
         self.image_dir_list = []               # 所有的图片目录
         self.label_path_list = []               # 所有的样本路径，文件， 与image_dir_list的元素一一对应
@@ -144,32 +164,48 @@ class LoadImagesAndLabels(Dataset):
         images_kps = []
         images_name = []
 
+        w = self.imgsz[1]
+        h = self.imgsz[0]
+
         for i in range(self.sq):
             image_path = image_dir + "/" + label_data[image_rel_index+i]['image']
-            img = torchvision.io.read_image(image_path)
+            img = cv2.imread(image_path)  # BGR
 
-            img = torchvision.transforms.functional.resize(img, self.imgsz, antialias=True)
-            img = img.type(torch.float32)
-            img *= 1 / 255
-            images.append(img)
+            interp = cv2.INTER_LINEAR if (self.augment) else cv2.INTER_AREA
+            img = cv2.resize(img, (w, h), interpolation=interp)
 
-            w = self.imgsz[1]
-            h = self.imgsz[0]
 
             # 32个点
-            kps_frac = label_data[image_rel_index]['kps']
+            kps_frac = np.array(label_data[image_rel_index]['kps'])
             assert len(kps_frac) == 32
 
-            hm_kps = np.zeros((len(kps_frac), h, w), dtype=np.float32)
-            kps_int = np.zeros((len(kps_frac), 3), dtype=np.int32)
+            # kps_frac -> kps_int
+            kps_int = kps_frac * np.array([w, h, 1]).T      # width, height, visible
+            kps_xy = kps_int[:, :2]    # xy
 
-            for i in range(len(kps_frac)):
+            if self.augment:
+                img, kps_xy = random_perspective(img, kps_xy)
+
+                img, kps_xy = self.albumentations(img, kps_xy)
+
+                augment_hsv(img, hgain=0.015, sgain=0.7, vgain=0.4)
+
+                img, kps_xy = random_flip(img, kps_xy)
+
+                # kps_int will return
+                kps_int[:, :2] = kps_xy
+                kps_int = kps_int.astype(int)
+
+                # from utils.general import visualize_kps
+                # visualize_kps(img, kps_int)
+
+
+            hm_kps = np.zeros((len(kps_int), h, w), dtype=np.float32)
+            for i in range(len(kps_int)):
                 # x, y, visible
-                if kps_frac[i][2]:
-                    x = int(kps_frac[i][0]*w)
-                    y = int(kps_frac[i][1]*h)
-
-                    kps_int[i] = [x, y, 1]
+                if kps_int[i][2]:
+                    x = kps_int[i][0]
+                    y = kps_int[i][1]
 
                     heatmap = self._gen_heatmap(w, h, x, y)
                     hm_kps[i] = heatmap
@@ -177,6 +213,9 @@ class LoadImagesAndLabels(Dataset):
                     heatmap = self._gen_heatmap(w, h, -1, -1)
                     hm_kps[i] = heatmap
 
+            img = ToTensor()(img)
+
+            images.append(img)
             hms_kps.append(hm_kps)
             images_kps.append(kps_int)
             images_name.append(image_path)
