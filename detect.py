@@ -9,7 +9,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 from models.tracknet import TrackNet
-from utils.general import get_shuttle_position
+from utils.general import get_shuttle_position, postprocess_court, visualize_kps, visualize_court
 
 # from yolov5 detect.py
 FILE = Path(__file__).resolve()
@@ -83,7 +83,9 @@ def main(opt):
         cv2.namedWindow(source_name, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(source_name, (w, h))
 
+    vid_cap.set(cv2.CAP_PROP_POS_FRAMES, 59)
     count = 0
+    P = None
     while vid_cap.isOpened():
         imgs = []
         for _ in range(1):
@@ -117,24 +119,41 @@ def main(opt):
         y_preds = y_preds*255
         y_preds = y_preds.astype('uint8')
 
+        kps = np.zeros((32, 3), dtype=np.int32)
         for i in range(32):
             (visible, cx_pred, cy_pred) = get_shuttle_position(y_preds[i])
             (cx, cy) = (int(cx_pred*w/imgsz[1]), int(cy_pred*h/imgsz[0]))
             if visible:
-                cv2.circle(imgs[0], (cx, cy), 8, (0,0,255), -1)
+                kps[i] = [cx, cy, 1]
+
+        print("{} ".format(count),  end="")
+        # postprocess kps
+        # import time
+        # t1 = time.time()
+        kps, P = postprocess_court(kps, last_P=P, img=imgs[0])
+        # t2 = time.time()
+        # print("postprocess_court: {}ms".format(t2-t1))
 
         if b_save_txt:
             f_save_txt.write('{},{},{},{}\n'.format(visible, cx, cy))
 
         if b_view_img:
-            cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[0])
-            cv2.imshow(source_name, imgs[0])
-            cv2.waitKey(1)
+            if P is not None:
+                imgs[0] = visualize_court(imgs[0], kps)
+                cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[0])
+                cv2.imshow(source_name, imgs[0])
+                cv2.waitKey(1)
+            else:
+                print("detect frame-{} Error!!!!!!!!!!!!!!!!!!!!!!!".format(count))
+                cv2.imwrite("./runs/detect/detect-error-{}.jpg".format(count), imgs[0])
+                # raise("P error!")
 
         out.write(imgs[0])
-        print("{} ---- visible: {}  cx: {}  cy: {}".format(count, visible, cx, cy))
 
         count += 1
+
+        if count >= 300:
+            break
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
