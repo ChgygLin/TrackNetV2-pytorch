@@ -83,7 +83,7 @@ def main(opt):
         cv2.namedWindow(source_name, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(source_name, (w, h))
 
-    vid_cap.set(cv2.CAP_PROP_POS_FRAMES, 59)
+    # vid_cap.set(cv2.CAP_PROP_POS_FRAMES, 59)
     count = 0
     P = None
     while vid_cap.isOpened():
