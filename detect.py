@@ -124,7 +124,7 @@ def main(opt):
                 cv2.circle(imgs[i], (cx, cy), 8, (0,0,255), -1)
 
             if b_save_txt:
-                f_save_txt.write('{},{},{},{}\n'.format(visible, cx, cy))
+                f_save_txt.write('{},{},{},{}\n'.format(count, visible, cx, cy))
 
             if b_view_img:
                 cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[i])
