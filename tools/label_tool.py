@@ -46,7 +46,7 @@ class VideoPlayer():
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         #self.fourcc = int(self.cap.get(cv.CAP_PROP_FOURCC))
         # self.fourcc = cv2.VideoWriter_fourcc('H', 'E', 'V', 'C')
-        self.fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         # self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.bitrate = self.cap.get(cv2.CAP_PROP_BITRATE)
