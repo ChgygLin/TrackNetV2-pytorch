@@ -4,6 +4,7 @@ import torchvision
 import os
 import sys
 import cv2
+import json
 import numpy as np
 from pathlib import Path
 from argparse import ArgumentParser
@@ -76,8 +77,8 @@ def main(opt):
     out = cv2.VideoWriter('{}/{}.mp4'.format(d_save_dir, source_name), fourcc, fps, (w, h))
 
     if b_save_txt:
-        f_save_txt = open('{}/{}.csv'.format(d_save_dir, source_name), 'w')
-        f_save_txt.write('frame_num,visible,x,y\n')
+        f_save_txt = open('{}/{}.json'.format(d_save_dir, source_name), 'w')
+        js_court_data = []
 
     if b_view_img:
         cv2.namedWindow(source_name, cv2.WINDOW_NORMAL)
@@ -135,7 +136,18 @@ def main(opt):
         # print("postprocess_court: {}ms".format(t2-t1))
 
         if b_save_txt:
-            f_save_txt.write('{},{},{},{}\n'.format(visible, cx, cy))
+            court_data = {}
+
+            court_data['frame_num'] = count
+            if P is not None:
+                court_data['visible'] = 1
+                court_data['P'] = P.tolist()
+            else:
+                court_data['visible'] = 0
+                court_data['P'] = np.zeros((3, 4)).tolist()
+
+            js_court_data.append(court_data)
+
 
         if b_view_img:
             if P is not None:
@@ -152,19 +164,18 @@ def main(opt):
 
         count += 1
 
-        if count >= 300:
-            break
-
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     if b_save_txt:
         # 每次识别3张，最后可能有1-2张没有识别，补0
-        while count < video_len:
-            f_save_txt.write('{},0,0,0\n'.format(count))
-            count += 1
+        # while count < video_len:
+        #     f_save_txt.write('{},0,0,0\n'.format(count))
+        #     count += 1
 
+        json.dump(js_court_data, f_save_txt)
         f_save_txt.close()
+
 
     out.release()
     vid_cap.release()
