@@ -8,6 +8,22 @@ import cv2
 import pandas as pd
 import numpy as np
 
+from utils.augmentations import random_perspective, Albumentations, augment_hsv, random_flip
+
+
+class ToTensor:
+    # YOLOv5 ToTensor class for image preprocessing
+    def __init__(self, half=False):
+        super().__init__()
+        self.half = half
+
+    def __call__(self, im):  # im = np.array HWC in BGR order
+        im = np.ascontiguousarray(im.transpose((2, 0, 1))[::-1])  # HWC to CHW -> BGR to RGB -> contiguous
+        im = torch.from_numpy(im)  # to torch
+        im = im.half() if self.half else im.float()  # uint8 to fp16/32
+        im /= 255.0  # 0-255 to 0.0-1.0
+        return im
+
 
 # num_workers   https://zhuanlan.zhihu.com/p/568076554
 # batch size 20    nw 1 ---> 1.35   nw 8 ---> 1.75
@@ -15,11 +31,12 @@ def create_dataloader(path,
                       imgsz=[288, 512],
                       batch_size=1,
                       sq=3,
+                      augment=False,
                       workers=8,
                       shuffle=False):
     print("create dataloader image size: {}".format(imgsz))
 
-    dataset = LoadImagesAndLabels(path, imgsz, batch_size, sq)
+    dataset = LoadImagesAndLabels(path, imgsz, batch_size, sq, augment)
 
     batch_size = min(batch_size, len(dataset))
     nd = torch.cuda.device_count()  # number of CUDA devices
@@ -51,11 +68,14 @@ class LoadImagesAndLabels(Dataset):
                  imgsz=[288, 512], 
                  batch_size=1,
                  sq=3,# 网络输入几张图
+                 augment=False,
                  ):
         self.imgsz = imgsz
         self.path = path
         self.batch_size = batch_size
         self.sq = sq
+        self.augment = augment
+        self.albumentations = Albumentations(imgsz) if augment else None
 
         self.image_dir_list = []               # 所有的图片目录
         self.label_path_list = []               # 所有的样本路径，文件， 与image_dir_list的元素一一对应
