@@ -141,43 +141,79 @@ class LoadImagesAndLabels(Dataset):
 
         #print("sample {}  use label:{}  relative index: {}".format(index, self.label_path_list[ix], rel_index))
 
-        w = self.imgsz[1]
-        h = self.imgsz[0]
-        df = self.df_list[ix]
+        images, heatmaps = self._get_sample(self.image_dir_list[ix], self.df_list[ix], rel_index)
 
+        return images, heatmaps
+
+
+    def _get_sample(self, image_dir, label_data, image_rel_index):
+        images = []
         heatmaps = []
 
-        for iy in range(self.sq):
-            visible = df['visible'][rel_index+iy]
-            x = df['x'][rel_index+iy]
-            y = df['y'][rel_index+iy]
+        w = self.imgsz[1]
+        h = self.imgsz[0]
+
+        for i in range(self.sq):
+            if (int(label_data['frame_num'][image_rel_index+i]) != int(image_rel_index+i)):
+                print(image_dir)
+                print(label_data['frame_num'])
+                print("{} ---> {}".format(label_data['frame_num'][image_rel_index+i], image_rel_index+i))
+            # assert(int(label_data['frame_num'][image_rel_index+i]) == int(image_rel_index+i))
+
+
+            image_path = image_dir + "/" + str(label_data['frame_num'][image_rel_index+i]) + ".jpg"
+            img = cv2.imread(image_path)  # BGR
+
+            interp = cv2.INTER_LINEAR if (self.augment) else cv2.INTER_AREA
+            img = cv2.resize(img, (w, h), interpolation=interp)
+
+
+            visible = label_data['visible'][image_rel_index+i]
+            x = label_data['x'][image_rel_index+i]
+            y = label_data['y'][image_rel_index+i]
+
+            kps_int = np.array([int(w*x), int(h*y), visible]).reshape(1, -1)
+            kps_xy = kps_int[:, :2]
+            assert(len(kps_xy) == 1)
+
+            if self.augment:
+                img, kps_xy = random_perspective(img, kps_xy)
+
+                img, kps_xy = self.albumentations(img, kps_xy)
+
+                augment_hsv(img, hgain=0.015, sgain=0.7, vgain=0.4)
+
+                img, kps_xy = random_flip(img, kps_xy)
+
+                # kps_int will return
+                kps_int[:, :2] = kps_xy
+                kps_int = kps_int.astype(int)
+
 
             if visible == 0:
                 heatmap = self._gen_heatmap(w, h, -1, -1)
             else:
                 heatmap = self._gen_heatmap(w, h, int(w*x), int(h*y))
-            
+
+            # x, y, visible
+            if kps_int[0][2] == 0:
+                heatmap = self._gen_heatmap(w, h, -1, -1)
+            else:
+                x = kps_int[0][0]
+                y = kps_int[0][1]
+
+                heatmap = self._gen_heatmap(w, h, x, y)
+
+
+            img = ToTensor()(img)
+
+            images.append(img)
             heatmaps.append(heatmap)
 
+        images = torch.concatenate(images)  # 平铺RGB维度
         heatmaps = torch.tensor(np.array(heatmaps), requires_grad=False, dtype=torch.float32)
-        images = self._get_sample(self.image_dir_list[ix], rel_index)
 
         return images, heatmaps
-
-
-    def _get_sample(self, image_dir, image_rel_index):
-        images = []
-
-        for i in range(self.sq):
-            image_path = image_dir + "/" + str(image_rel_index+i) + ".jpg"
-            img = torchvision.io.read_image(image_path)
-
-            img = torchvision.transforms.functional.resize(img, self.imgsz, antialias=True)
-            img = img.type(torch.float32)
-            img *= 1 / 255
-            images.append(img)
-
-        return torch.concatenate(images)
 
 
     def _gen_heatmap(self, w, h, cx, cy, r=2.5, mag=1):
