@@ -9,7 +9,16 @@ import json
 import pandas as pd
 import numpy as np
 
-from utils.augmentations import random_perspective, Albumentations, augment_hsv, random_flip
+import sys
+from pathlib import Path
+
+
+FILE = Path(__file__).resolve()
+ABS_ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ABS_ROOT) not in sys.path:
+    sys.path.append(str(ABS_ROOT))  # add ROOT to PATH
+
+from augmentations import random_perspective, Albumentations, augment_hsv, random_flip
 
 
 class ToTensor:
