@@ -79,6 +79,7 @@ def main(opt):
     if b_save_txt:
         f_save_txt = open('{}/{}.json'.format(d_save_dir, source_name), 'w')
         js_court_data = []
+        js_shuttle_data = []
 
     if b_view_img:
         cv2.namedWindow(source_name, cv2.WINDOW_NORMAL)
@@ -120,8 +121,8 @@ def main(opt):
         y_preds = y_preds*255
         y_preds = y_preds.astype('uint8')
 
-        kps = np.zeros((32, 3), dtype=np.int32)
-        for i in range(32):
+        kps = np.zeros((33, 3), dtype=np.int32)
+        for i in range(33):
             (visible, cx_pred, cy_pred) = get_shuttle_position(y_preds[i])
             (cx, cy) = (int(cx_pred*w/imgsz[1]), int(cy_pred*h/imgsz[0]))
             if visible:
@@ -131,7 +132,8 @@ def main(opt):
         # postprocess kps
         # import time
         # t1 = time.time()
-        kps, P = postprocess_court(kps, last_P=P, img=imgs[0])
+        kps_court = kps[:32, :]
+        kps_court, P = postprocess_court(kps_court, last_P=P, img=imgs[0])
         # t2 = time.time()
         # print("postprocess_court: {}ms".format(t2-t1))
 
@@ -147,6 +149,14 @@ def main(opt):
                 court_data['P'] = np.zeros((3, 4)).tolist()
 
             js_court_data.append(court_data)
+
+            shuttle_data = {}
+            shuttle_data["frame_num"] = count
+            shuttle_data["visible"] = kps[32][2]
+            shuttle_data["x"] = kps[32][0]
+            shuttle_data["y"] = kps[32][1]
+
+            js_shuttle_data.append(shuttle_data)
 
 
         if b_view_img:
@@ -173,7 +183,11 @@ def main(opt):
         #     f_save_txt.write('{},0,0,0\n'.format(count))
         #     count += 1
 
-        json.dump(js_court_data, f_save_txt)
+        js_all_data = {}
+        js_all_data["court"] = js_court_data
+        js_all_data["shuttle"] = js_shuttle_data
+
+        json.dump(js_all_data, f_save_txt)
         f_save_txt.close()
 
 
