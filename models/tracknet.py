@@ -64,7 +64,7 @@ class TrackNet(nn.Module):
 
         self.conv2d_16 = Conv(192, 64)
         self.conv2d_17 = Conv(64, 64)
-        self.conv2d_18 = nn.Conv2d(64, 32, kernel_size=(1,1), padding='same')           # 输出32张图
+        self.conv2d_18 = nn.Conv2d(64, 33, kernel_size=(1,1), padding='same')           # 输出32张图
         # self.conv2d_18 = Conv(64, 1, k=(1,1))           输出1张图
 
 
