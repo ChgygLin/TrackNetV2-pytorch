@@ -159,8 +159,8 @@ class LoadImagesAndLabels(Dataset):
 
         # 获取sq张图片
         # images :      [sq][3][h][w]
-        # hms_kps:      [sq][32][h][w]
-        # images_kps:   [sq][32][x][y]
+        # hms_kps:      [sq][33][h][w]  32+1
+        # images_kps:   [sq][33][x][y]  32+1
         # images_name:  [sq]
         images, hms_kps, images_kps, images_name = self._get_sample(self.image_dir_list[ix], self.label_data_list[ix], rel_index)
 
@@ -185,8 +185,13 @@ class LoadImagesAndLabels(Dataset):
 
 
             # 32个点
-            kps_frac = np.array(label_data[image_rel_index+i]['kps'])
+            kps_frac = np.array(label_data[image_rel_index+i]['court'])
             assert len(kps_frac) == 32
+
+            # 添加羽毛球标签
+            shuttle = label_data[image_rel_index+i]['shuttle']
+            kps_frac = np.vstack([kps_frac, shuttle])
+            assert len(kps_frac) == 33
 
             # kps_frac -> kps_int
             kps_int = kps_frac * np.array([w, h, 1]).T      # width, height, visible
