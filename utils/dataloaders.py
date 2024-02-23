@@ -176,7 +176,7 @@ class LoadImagesAndLabels(Dataset):
 
 
             # 32个点
-            kps_frac = np.array(label_data[image_rel_index]['kps'])
+            kps_frac = np.array(label_data[image_rel_index+i]['kps'])
             assert len(kps_frac) == 32
 
             # kps_frac -> kps_int
