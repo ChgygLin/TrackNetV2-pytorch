@@ -49,11 +49,14 @@ for dir in os.listdir(rallyPath):
 
         print("handle video: {}".format(video_path))
 
-        # 确定视频宽高
-        cap = cv2.VideoCapture(video_path)
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        cap.release()
+        if os.path.exists(video_path):
+            # 确定视频宽高
+            cap = cv2.VideoCapture(video_path)
+            frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            cap.release()
+        else:
+            frame_width, frame_height = 1280, 720
 
         # 将坐标转化为比例
         df = pd.read_csv(file_path)
