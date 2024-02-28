@@ -209,7 +209,7 @@ def main(opt):
     model = TrackNet().to(device)
 
     global weight_matrix
-    weight_matrix = torch.ones(batch_size, 33, imgsz[0], imgsz[1]).to(device)
+    weight_matrix = torch.ones(1, 33, imgsz[0], imgsz[1]).to(device)
     weight_matrix[:, 30, :, :] = 5    # left net
     weight_matrix[:, 31, :, :] = 5    # right net
     weight_matrix[:, 32, :, :] = 8    # shuttle
