@@ -169,7 +169,7 @@ def postprocess_court(kps, last_P=None, img=None):
                         min_err = err
                         best_P = P
 
-                    print("Found court: min_err: {} num_kps: {}".format(min_err, len(place)), end="")
+                    # print("Found court: min_err: {} num_kps: {}".format(min_err, len(place)), end="")
                     break   # 只要big_err为0就退出
                 # else:
                 #     print("remaining big error: {}".format(big_err.sum()))

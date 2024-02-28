@@ -158,16 +158,19 @@ def main(opt):
 
             js_shuttle_data.append(shuttle_data)
 
-
+        print("{} ---- shuttle visible: {}-({}, {}),  court visible: {}".format(count, kps[32][2], kps[32][0], kps[32][1], 1 if P is not None else 0))
         if b_view_img:
+            if kps[32][2]:  # visible
+                cv2.circle(imgs[0], (kps[32][0], kps[32][1]), 8, (0,0,255), -1)
+
             if P is not None:
                 imgs[0] = visualize_court(imgs[0], kps)
                 cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[0])
                 cv2.imshow(source_name, imgs[0])
                 cv2.waitKey(1)
-            else:
-                print("detect frame-{} Error!!!!!!!!!!!!!!!!!!!!!!!".format(count))
-                cv2.imwrite("./runs/detect/detect-error-{}.jpg".format(count), imgs[0])
+            # else:
+                # print("detect frame-{} Error!!!!!!!!!!!!!!!!!!!!!!!".format(count))
+                # cv2.imwrite("./runs/detect/detect-error-{}.jpg".format(count), imgs[0])
                 # raise("P error!")
 
         out.write(imgs[0])
