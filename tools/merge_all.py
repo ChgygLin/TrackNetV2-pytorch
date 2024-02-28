@@ -108,17 +108,34 @@ def merge_dir_labels_batch(math_path):
             merge_dir_labels(image_dir_tmp)
 
 
+# Amateur
+def handle_rally_batch(batch_path):
+    for rally_dir in os.listdir(batch_path):
+
+        rally_path = os.path.join(batch_path, rally_dir)
+        # print(rally_path)
+        merge_dir_labels_batch(rally_path)
+
+# TracknetV2
+def handle_base_path(base_path):
+    for to_batch_dir in os.listdir(base_path):
+        to_batch_path = os.path.join(base_path, to_batch_dir)
+
+        handle_rally_batch(to_batch_path)
 
 if __name__ == "__main__":
     try:
-        math_path = sys.argv[1]
-        if not math_path:
+        base_path = sys.argv[1]
+        if not base_path:
             raise ''
     except:
-        print('usage: python merge_labelme.py match_path')
+        print('usage: python merge_labelme.py base_path')
         exit(1)
           
     # folder_path = "xxx/match/court1"
     # merge_dir_labels(folder_path)
     
-    merge_dir_labels_batch(math_path)
+
+    # merge_dir_labels_batch(base_path)
+    # handle_rally_batch(base_path)
+    handle_base_path(base_path)
