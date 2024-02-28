@@ -21,12 +21,16 @@ if str(ABS_ROOT) not in sys.path:
     sys.path.append(str(ABS_ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ABS_ROOT, Path.cwd()))  # relative
 
+# net and shuttle weights
+weight_matrix = None
 
 def wbce_loss(y_true, y_pred):
-    return -1*(
+    loss =  -1*(
         ((1-y_pred)**2) * y_true * torch.log(torch.clamp(y_pred, min=1e-07, max=1))  +
         (y_pred**2) * (1-y_true) * torch.log(torch.clamp(1-y_pred, min=1e-07, max=1))
-    ).sum()
+    ) * weight_matrix
+
+    return loss.sum()
 
 
 def validation_loop(device, model, val_loader, log_writer, epoch):
@@ -201,9 +205,14 @@ def main(opt):
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
 
-
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = TrackNet().to(device)
+
+    global weight_matrix
+    weight_matrix = torch.ones(batch_size, 33, imgsz[0], imgsz[1]).to(device)
+    weight_matrix[:, 30, :, :] = 5    # left net
+    weight_matrix[:, 31, :, :] = 5    # right net
+    weight_matrix[:, 32, :, :] = 8    # shuttle
 
     optimizer = torch.optim.Adadelta(model.parameters(), lr=0.99)
 
