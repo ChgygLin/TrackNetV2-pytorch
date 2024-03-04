@@ -152,9 +152,9 @@ def main(opt):
 
             shuttle_data = {}
             shuttle_data["frame_num"] = count
-            shuttle_data["visible"] = kps[32][2]
-            shuttle_data["x"] = kps[32][0]
-            shuttle_data["y"] = kps[32][1]
+            shuttle_data["visible"] = int(kps[32][2])
+            shuttle_data["x"] = int(kps[32][0])
+            shuttle_data["y"] = int(kps[32][1])
 
             js_shuttle_data.append(shuttle_data)
 
