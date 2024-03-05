@@ -154,10 +154,10 @@ class LoadImagesAndLabels(Dataset):
         h = self.imgsz[0]
 
         for i in range(self.sq):
-            if (int(label_data['frame_num'][image_rel_index+i]) != int(image_rel_index+i)):
-                print(image_dir)
-                print(label_data['frame_num'])
-                print("{} ---> {}".format(label_data['frame_num'][image_rel_index+i], image_rel_index+i))
+            #if (int(label_data['frame_num'][image_rel_index+i]) != int(image_rel_index+i)):
+            #    print(image_dir)
+            #    print(label_data['frame_num'])
+            #    print("{} ---> {}".format(label_data['frame_num'][image_rel_index+i], image_rel_index+i))
             # assert(int(label_data['frame_num'][image_rel_index+i]) == int(image_rel_index+i))
 
 
