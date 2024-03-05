@@ -125,7 +125,7 @@ class LoadImagesAndLabels(Dataset):
         # 读取csv
         print("\n")
         for image_dir in self.image_dir_list:
-            label_path = "{}.{}".format(image_dir.replace('images', 'labels'), "json")
+            label_path = "{}_court.{}".format(image_dir.replace('images', 'labels'), "json")
             self.label_path_list.append(label_path)
 
             with open(label_path, 'r') as file:

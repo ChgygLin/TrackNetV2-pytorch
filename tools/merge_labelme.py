@@ -70,7 +70,7 @@ def merge_dir_labels(image_dir):
             images_labels_json.append(image_labels_json)
 
     label_dir = image_dir.replace("images", "labels")
-    with open(label_dir + '.json', 'w') as file:
+    with open(label_dir + '_court.json', 'w') as file:
         json.dump(images_labels_json, file)
 
 
@@ -91,12 +91,26 @@ def merge_dir_labels_batch(math_path):
         if os.path.isdir(image_dir_tmp):
             merge_dir_labels(image_dir_tmp)
 
+# Amateur
+def handle_rally_batch(batch_path):
+    for rally_dir in os.listdir(batch_path):
+
+        rally_path = os.path.join(batch_path, rally_dir)
+        merge_dir_labels_batch(rally_path)
+
+# TracknetV2
+def handle_base_path(base_path):
+    for to_batch_dir in os.listdir(base_path):
+        to_batch_path = os.path.join(base_path, to_batch_dir)
+
+        handle_rally_batch(to_batch_path)
+
 
 
 if __name__ == "__main__":
     try:
-        math_path = sys.argv[1]
-        if not math_path:
+        base_path = sys.argv[1]
+        if not base_path:
             raise ''
     except:
         print('usage: python merge_labelme.py match_path')
@@ -105,4 +119,5 @@ if __name__ == "__main__":
     # folder_path = "xxx/match/court1"
     # merge_dir_labels(folder_path)
     
-    merge_dir_labels_batch(math_path)
+    # merge_dir_labels_batch(math_path)
+    handle_base_path(base_path)
