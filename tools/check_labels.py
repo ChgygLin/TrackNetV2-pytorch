@@ -36,14 +36,20 @@ def handle_rally(match_path):
                         exit()
 
     # 校验csv标签
-    for labels_dir in os.listdir(labels_path):
-        label_path = labels_path+"/"+labels_dir
-        print(label_path)
+    # for labels_dir in os.listdir(labels_path):
+    for csv_dir in glob.glob(os.path.join(labels_path+"/", '*.csv')):
+        images_base_path = csv_dir.replace("labels", "images").split(".")[0]
 
-        df = pd.read_csv(label_path)
+        print(csv_dir)
+        df = pd.read_csv(csv_dir)
         frame_nums = df["frame_num"].values
 
         assert(np.all(np.ediff1d(frame_nums) == 1))
+
+        for frame_num in frame_nums:
+            if not os.path.exists("{}/{}.jpg".format(images_base_path, frame_num)):
+                print("{}/{}.jpg".format(images_base_path, frame_num))
+                exit()
 
 # Amateur
 def handle_rally_batch(batch_path):
