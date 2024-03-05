@@ -86,7 +86,7 @@ def merge_dir_labels(image_dir):
             images_labels_json.append(image_labels_json)
 
     label_dir = image_dir.replace("images", "labels")
-    with open(label_dir + '.json', 'w') as file:
+    with open(label_dir + '_all.json', 'w') as file:
         json.dump(images_labels_json, file)
 
 
