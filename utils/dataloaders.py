@@ -236,6 +236,7 @@ class LoadImagesAndLabels(Dataset):
 
         images = torch.concatenate(images)  # 平铺RGB维度
         hms_kps = torch.tensor(np.array(hms_kps), requires_grad=False, dtype=torch.float32)
+        hms_kps = hms_kps.view(-1, h, w)
 
         return images, hms_kps, images_kps, images_name
 

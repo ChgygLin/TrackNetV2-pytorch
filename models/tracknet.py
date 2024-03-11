@@ -23,12 +23,12 @@ class Conv(nn.Module):
 
 
 class TrackNet(nn.Module):
-    def __init__(self):
+    def __init__(self, sq=3):
         super().__init__()
 
         # VGG16
         # self.conv2d_1 = Conv(3, 64)   输入3张灰度图
-        self.conv2d_1 = Conv(3, 64)     # 输入1张RGB图
+        self.conv2d_1 = Conv(3*sq, 64)     # 输入1张RGB图
         self.conv2d_2 = Conv(64, 64)
         self.max_pooling_1 = nn.MaxPool2d((2,2), stride=(2,2))
 
@@ -64,7 +64,7 @@ class TrackNet(nn.Module):
 
         self.conv2d_16 = Conv(192, 64)
         self.conv2d_17 = Conv(64, 64)
-        self.conv2d_18 = nn.Conv2d(64, 33, kernel_size=(1,1), padding='same')           # 输出32张图
+        self.conv2d_18 = nn.Conv2d(64, 33*sq, kernel_size=(1,1), padding='same')           # 输出32张图
         # self.conv2d_18 = Conv(64, 1, k=(1,1))           输出1张图
 
 
