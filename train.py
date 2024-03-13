@@ -236,8 +236,8 @@ def main(opt):
 
     global weight_matrix
     weight_matrix = torch.ones(1, 33*sq, imgsz[0], imgsz[1]).to(device)
-    weight_matrix[:, [32, 65, 98], :, :] = 15               # shuttle    32
-    weight_matrix[:, [30,31, 63,64, 96,97], :, :] = 5       # left net   30, right net  31
+    weight_matrix[:, [32, 65, 98], :, :] = 30               # shuttle    32
+    weight_matrix[:, [30,31, 63,64, 96,97], :, :] = 15       # left net   30, right net  31
 
     optimizer = torch.optim.Adadelta(model.parameters(), lr=0.99)
 
