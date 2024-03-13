@@ -43,7 +43,7 @@ def validation_loop(device, model, val_loader, log_writer, epoch):
     m_Ground = Metrics(0, 0, 0, 0, 0)
 
     with torch.inference_mode():
-        pbar = tqdm(val_loader, ncols=180)
+        pbar = tqdm(val_loader, dynamic_ncols=True)#ncols=180)
         for batch_index, (X, y, _, _) in enumerate(pbar):
             X, y = X.to(device), y.to(device)
             y_pred = model(X)
