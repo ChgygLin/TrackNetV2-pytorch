@@ -46,6 +46,7 @@ def main(opt):
     f_weights = str(opt.weights)
     f_source = str(opt.source)
     imgsz = opt.imgsz
+    sq = 3
 
     # video_name ---> video_name_pred
     source_name = '{}_predict'.format(source_name)
@@ -90,7 +91,7 @@ def main(opt):
     P = None
     while vid_cap.isOpened():
         imgs = []
-        for _ in range(1):
+        for _ in range(sq):
             ret, img = vid_cap.read()
 
             if not ret:
@@ -121,64 +122,65 @@ def main(opt):
         y_preds = y_preds*255
         y_preds = y_preds.astype('uint8')
 
-        kps = np.zeros((33, 3), dtype=np.int32)
-        for i in range(33):
-            (visible, cx_pred, cy_pred) = get_shuttle_position(y_preds[i])
-            (cx, cy) = (int(cx_pred*w/imgsz[1]), int(cy_pred*h/imgsz[0]))
-            if visible:
-                kps[i] = [cx, cy, 1]
+        for si in range(sq):
+            kps = np.zeros((33, 3), dtype=np.int32)
+            for i in range(33):
+                (visible, cx_pred, cy_pred) = get_shuttle_position(y_preds[33*si+i])
+                (cx, cy) = (int(cx_pred*w/imgsz[1]), int(cy_pred*h/imgsz[0]))
+                if visible:
+                    kps[i] = [cx, cy, 1]
 
-        print("{} ".format(count),  end="")
-        # postprocess kps
-        # import time
-        # t1 = time.time()
-        kps_court = kps[:32, :]
-        kps_court, P = postprocess_court(kps_court, last_P=P, img=imgs[0])
-        # t2 = time.time()
-        # print("postprocess_court: {}ms".format(t2-t1))
+            print("{} ".format(count),  end="")
+            # postprocess kps
+            # import time
+            # t1 = time.time()
+            kps_court = kps[:32, :]
+            kps_court, P = postprocess_court(kps_court, last_P=P, img=imgs[si])
+            # t2 = time.time()
+            # print("postprocess_court: {}ms".format(t2-t1))
 
-        if b_save_txt:
-            court_data = {}
+            if b_save_txt:
+                court_data = {}
 
-            court_data['frame_num'] = count
-            if P is not None:
-                court_data['visible'] = 1
-                court_data['P'] = P.tolist()
-            else:
-                court_data['visible'] = 0
-                court_data['P'] = np.zeros((3, 4)).tolist()
+                court_data['frame_num'] = count
+                if P is not None:
+                    court_data['visible'] = 1
+                    court_data['P'] = P.tolist()
+                else:
+                    court_data['visible'] = 0
+                    court_data['P'] = np.zeros((3, 4)).tolist()
 
-            js_court_data.append(court_data)
+                js_court_data.append(court_data)
 
-            shuttle_data = {}
-            shuttle_data["frame_num"] = count
-            shuttle_data["visible"] = int(kps[32][2])
-            shuttle_data["x"] = int(kps[32][0])
-            shuttle_data["y"] = int(kps[32][1])
+                shuttle_data = {}
+                shuttle_data["frame_num"] = count
+                shuttle_data["visible"] = int(kps[32][2])
+                shuttle_data["x"] = int(kps[32][0])
+                shuttle_data["y"] = int(kps[32][1])
 
-            js_shuttle_data.append(shuttle_data)
+                js_shuttle_data.append(shuttle_data)
 
-        print("{} ---- shuttle visible: {}-({}, {}),  court visible: {}".format(count, kps[32][2], kps[32][0], kps[32][1], 1 if P is not None else 0))
-        if b_view_img:
-            if kps[32][2]:  # visible
-                cv2.circle(imgs[0], (kps[32][0], kps[32][1]), 8, (0,0,255), -1)
+            print("{} ---- shuttle visible: {}-({}, {}),  court visible: {}".format(count, kps[32][2], kps[32][0], kps[32][1], 1 if P is not None else 0))
+            if b_view_img:
+                if kps[32][2]:  # visible
+                    cv2.circle(imgs[si], (kps[32][0], kps[32][1]), 8, (0,0,255), -1)
 
-            if P is not None:
-                imgs[0] = visualize_court(imgs[0], kps)
-                cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[0])
-                cv2.imshow(source_name, imgs[0])
-                cv2.waitKey(1)
-            # else:
-                # print("detect frame-{} Error!!!!!!!!!!!!!!!!!!!!!!!".format(count))
-                # cv2.imwrite("./runs/detect/detect-error-{}.jpg".format(count), imgs[0])
-                # raise("P error!")
+                if P is not None:
+                    imgs[si] = visualize_court(imgs[si], kps)
+                    cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[si])
+                    cv2.imshow(source_name, imgs[si])
+                    cv2.waitKey(1)
+                # else:
+                    # print("detect frame-{} Error!!!!!!!!!!!!!!!!!!!!!!!".format(count))
+                    # cv2.imwrite("./runs/detect/detect-error-{}.jpg".format(count), imgs[0])
+                    # raise("P error!")
 
-        out.write(imgs[0])
+            out.write(imgs[si])
 
-        count += 1
+            count += 1
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     if b_save_txt:
         # 每次识别3张，最后可能有1-2张没有识别，补0
