@@ -11,7 +11,8 @@ from tensorboardX import SummaryWriter
 
 from models.tracknet import TrackNet
 from utils.dataloaders import create_dataloader
-from utils.general import check_dataset, outcome, evaluation, tensorboard_log
+from utils.general import check_dataset, outcome_all, evaluation, tensorboard_log
+from utils.general import Metrics
 
 
 # from yolov5 detect.py
@@ -37,7 +38,9 @@ def validation_loop(device, model, val_loader, log_writer, epoch):
     model.eval()
 
     loss_sum = 0
-    TP = TN = FP1 = FP2 = FN = 0
+    m_Shuttle = Metrics(0, 0, 0, 0, 0)
+    m_Net = Metrics(0, 0, 0, 0, 0)
+    m_Ground = Metrics(0, 0, 0, 0, 0)
 
     with torch.inference_mode():
         pbar = tqdm(val_loader, ncols=180)
@@ -51,19 +54,25 @@ def validation_loop(device, model, val_loader, log_writer, epoch):
             y_pred_ = y_pred.detach().cpu().numpy()
 
             y_pred_ = (y_pred_ > 0.5).astype('float32')
-            (tp, tn, fp1, fp2, fn) = outcome(y_pred_, y_)
-            TP += tp
-            TN += tn
-            FP1 += fp1
-            FP2 += fp2
-            FN += fn
+            m_shuttle, m_net, m_ground = outcome_all(y_pred_, y_)
+            m_Shuttle   += m_shuttle
+            m_Net       += m_net
+            m_Ground    += m_ground
 
-            (accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+            (acc_s, pre_s, re_s) = m_Shuttle.evaluation()
+            (acc_n, pre_n, re_n) = m_Net.evaluation()
+            (acc_g, pre_g, re_g) = m_Ground.evaluation()
 
-            pbar.set_description('Val   loss: {:.6f}  |  TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}  |  Accuracy: {:.4f}, Precision: {:.4f}, Recall: {:.4f}'.format( \
-                loss_sum / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, accuracy, precision, recall))
+            pbar.set_description('Val   loss: {:.6f} || Shuttle TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}| Acc: {:.4f}, Pre: {:.4f}, Rec: {:.4f} || Net Acc: {:.4f}, Pre: {:.4f}, Rec: {:.4f} || Ground Acc: {:.4f}, Pre: {:.4f}, Rec: {:.4f}'.format(
+                    loss_sum / ((batch_index+1)*X.shape[0]),\
+                    m_Shuttle.TP,  m_Shuttle.TN, m_Shuttle.FP1, m_Shuttle.FP2, m_Shuttle.FN,acc_s, pre_s, re_s, \
+                    acc_n, pre_n, re_n, \
+                    acc_g, pre_g, re_g
+                    ))
 
-        tensorboard_log(log_writer, "Val", loss_sum / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, epoch)
+        tensorboard_log(log_writer, "Val/Shuttle", loss_sum / ((batch_index+1)*X.shape[0]), m_Shuttle, epoch)
+        tensorboard_log(log_writer, "Val/Net", loss_sum / ((batch_index+1)*X.shape[0]), m_Net, epoch)
+        tensorboard_log(log_writer, "Val/Ground", loss_sum / ((batch_index+1)*X.shape[0]), m_Ground, epoch)
 
     return loss_sum/len(val_loader)
 
@@ -80,14 +89,19 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
     
     log_writer = SummaryWriter(log_dir)
 
+    debug_training = False  # It significantly slows down the training speed
     for epoch in range(start_epoch, epochs):
         print("\n==================================================================================================")
         tqdm.write("Epoch: {} / {}\n".format(epoch, epochs))
         running_loss = 0.0
-        TP = TN = FP1 = FP2 = FN = 0
+
+        if debug_training:
+            m_Shuttle = Metrics(0, 0, 0, 0, 0)
+            m_Net = Metrics(0, 0, 0, 0, 0)
+            m_Ground = Metrics(0, 0, 0, 0, 0)
 
         model.train()
-        pbar = tqdm(train_loader, ncols=180)
+        pbar = tqdm(train_loader, dynamic_ncols=True)#ncols=180)
         for batch_index, (X, y, _, _) in enumerate(pbar):
             X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
@@ -101,21 +115,29 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
 
             running_loss += loss.item()
 
-            y_ = y.detach().cpu().numpy()
-            y_pred_ = y_pred.detach().cpu().numpy()
+            if debug_training:
+                y_ = y.detach().cpu().numpy()
+                y_pred_ = y_pred.detach().cpu().numpy()
 
-            y_pred_ = (y_pred_ > 0.5).astype('float32')
-            (tp, tn, fp1, fp2, fn) = outcome(y_pred_, y_)
-            TP += tp
-            TN += tn
-            FP1 += fp1
-            FP2 += fp2
-            FN += fn
+                y_pred_ = (y_pred_ > 0.5).astype('float32')
 
-            (accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+                m_shuttle, m_net, m_ground = outcome_all(y_pred_, y_)
+                m_Shuttle   += m_shuttle
+                m_Net       += m_net
+                m_Ground    += m_ground
 
-            pbar.set_description('Train loss: {:.6f}  |  TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}  |  Accuracy: {:.4f}, Precision: {:.4f}, Recall: {:.4f}'.format( \
-                running_loss / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, accuracy, precision, recall))
+                (acc_s, pre_s, re_s) = m_Shuttle.evaluation()
+                (acc_n, pre_n, re_n) = m_Net.evaluation()
+                (acc_g, pre_g, re_g) = m_Ground.evaluation()
+
+                pbar.set_description('Train loss: {:.6f} || Shuttle TP: {}, TN: {}, FP1: {}, FP2: {}, FN: {}| Acc: {:.4f}, Pre: {:.4f}, Rec: {:.4f} || Net Acc: {:.4f}, Pre: {:.4f}, Rec: {:.4f} || Ground Acc: {:.4f}, Pre: {:.4f}, Rec: {:.4f}'.format(
+                        running_loss / ((batch_index+1)*X.shape[0]),\
+                        m_Shuttle.TP,  m_Shuttle.TN, m_Shuttle.FP1, m_Shuttle.FP2, m_Shuttle.FN,acc_s, pre_s, re_s, \
+                        acc_n, pre_n, re_n, \
+                        acc_g, pre_g, re_g
+                        ))
+            else:
+                pbar.set_description('Train loss: {:.6f}'.format(running_loss / ((batch_index+1)*X.shape[0])))
 
             if batch_index % log_period == 0:
                 with torch.inference_mode():
@@ -147,12 +169,15 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
                     tqdm.write('--- Saving weights to: {}/best.pt ---'.format(save_dir))
                     torch.save(model.state_dict(), '{}/best.pt'.format(save_dir))
 
-        tensorboard_log(log_writer, "Train", running_loss / ((batch_index+1)*X.shape[0]), TP, TN, FP1, FP2, FN, epoch)
+        if debug_training:
+            tensorboard_log(log_writer, "Train/Shuttle", running_loss / ((batch_index+1)*X.shape[0]), m_Shuttle, epoch)
+            tensorboard_log(log_writer, "Train/Net", running_loss / ((batch_index+1)*X.shape[0]), m_Net, epoch)
+            tensorboard_log(log_writer, "Train/Ground", running_loss / ((batch_index+1)*X.shape[0]), m_Ground, epoch)
 
         print('lr: {}'.format(lr_scheduler.get_last_lr()))
         lr_scheduler.step()
 
-        if epoch%10 == 0:
+        if epoch%1 == 0:
             ckpt_dir = '{}/checkpoint'.format(save_dir)
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
@@ -196,6 +221,7 @@ def main(opt):
     f_data = str(opt.data)
     imgsz = opt.imgsz
     sq = opt.sq
+    assert (sq==3)
 
     start_epoch = 0
 
@@ -210,10 +236,8 @@ def main(opt):
 
     global weight_matrix
     weight_matrix = torch.ones(1, 33*sq, imgsz[0], imgsz[1]).to(device)
-    for i in range(sq):
-        weight_matrix[:, 33*(sq+1)-3, :, :] = 5     # left net   30
-        weight_matrix[:, 33*(sq+1)-2, :, :] = 5     # right net  31
-        weight_matrix[:, 33*(sq+1)-1, :, :] = 15    # shuttle    32
+    weight_matrix[:, [32, 65, 98], :, :] = 15               # shuttle    32
+    weight_matrix[:, [30,31, 63,64, 96,97], :, :] = 5       # left net   30, right net  31
 
     optimizer = torch.optim.Adadelta(model.parameters(), lr=0.99)
 

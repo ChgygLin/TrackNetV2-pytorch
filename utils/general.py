@@ -9,6 +9,38 @@ FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 
 
+class Metrics:
+    def __init__(self, tp=0, tn=0, fp1=0, fp2=0, fn=0):
+        self.TP = tp
+        self.TN = tn
+        self.FP1 = fp1
+        self.FP2 = fp2
+        self.FN = fn
+
+    def __add__(self, other):
+        return Metrics(self.TP + other.TP,
+                             self.TN + other.TN,
+                             self.FP1 + other.FP1,
+                             self.FP2 + other.FP2,
+                             self.FN + other.FN)
+
+    def evaluation(self):
+        try:
+            accuracy = (self.TP + self.TN) / (self.TP + self.TN + self.FP1 + self.FP2 + self.FN)
+        except:
+            accuracy = 0
+        try:
+            precision = self.TP / (self.TP + self.FP1 + self.FP2)
+        except:
+            precision = 0
+        try:
+            recall = self.TP / (self.TP + self.FN)
+        except:
+            recall = 0
+
+        return (accuracy, precision, recall) 
+
+
 def yaml_load(file):
     # Single-line safe yaml loading
     with open(file, errors='ignore') as f:
@@ -248,7 +280,7 @@ def visualize_court(img, kps):    # x_int, y_int, visible
     return im
 
 
-def outcome(y_pred, y_true, tol=3): # [batch, 32, h, w]
+def outcome(y_pred, y_true, tol=3): # [batch, 33*sq, h, w]
     n = y_pred.shape[0]
     kps_len = y_pred.shape[1]
     i = 0
@@ -277,7 +309,32 @@ def outcome(y_pred, y_true, tol=3): # [batch, 32, h, w]
                 else:
                     TP += 1
         i += 1
-    return (TP, TN, FP1, FP2, FN)
+    return Metrics(TP, TN, FP1, FP2, FN)
+
+
+def outcome_all(y_pred, y_true): # [batch, 33*sq, h, w]
+    sq = int(y_pred.shape[1] / 33)
+
+    # get shuttle   33-1  66-1    99-1
+    y_pred_shuttle = y_pred[:, [32, 65, 98], :, :]
+    y_true_shuttle = y_true[:, [32, 65, 98], :, :]
+
+    # get net   33-3 -> 33-1
+    y_pred_net = y_pred[:, [30,31, 63,64, 96,97], :, :]
+    y_true_net = y_true[:, [30,31, 63,64, 96,97], :, :]
+
+    # get place 0 ->  33-3
+    indices = np.concatenate([np.arange(0, 30), np.arange(33, 63), np.arange(66, 96)])
+    y_pred_ground = y_pred[:, indices, :, :]
+    y_true_ground = y_true[:, indices, :, :]
+
+
+    m_shuttle = outcome(y_pred_shuttle, y_true_shuttle)
+    m_net = outcome(y_pred_net, y_true_net)
+    m_ground = outcome(y_pred_ground, y_true_ground)
+
+    return m_shuttle, m_net, m_ground
+
 
 
 def evaluation(TP, TN, FP1, FP2, FN):
@@ -296,16 +353,16 @@ def evaluation(TP, TN, FP1, FP2, FN):
 
     return (accuracy, precision, recall)
 
-def tensorboard_log(log_writer, type, avg_loss, TP, TN, FP1, FP2, FN,  epoch):
+def tensorboard_log(log_writer, type, avg_loss, m_Metrics,  epoch):
     log_writer.add_scalar('{}/loss'.format(type), avg_loss, epoch)
-    log_writer.add_scalar('{}/TP'.format(type), TP, epoch)
-    log_writer.add_scalar('{}/TN'.format(type), TN, epoch)
-    log_writer.add_scalar('{}/FP1'.format(type), FP1, epoch)
-    log_writer.add_scalar('{}/FP2'.format(type), FP2, epoch)
-    log_writer.add_scalar('{}/FN'.format(type), FN, epoch)
-    log_writer.add_scalar('{}/TP'.format(type), TP, epoch)
+    log_writer.add_scalar('{}/TP'.format(type), m_Metrics.TP, epoch)
+    log_writer.add_scalar('{}/TN'.format(type), m_Metrics.TN, epoch)
+    log_writer.add_scalar('{}/FP1'.format(type), m_Metrics.FP1, epoch)
+    log_writer.add_scalar('{}/FP2'.format(type), m_Metrics.FP2, epoch)
+    log_writer.add_scalar('{}/FN'.format(type), m_Metrics.FN, epoch)
+    log_writer.add_scalar('{}/TP'.format(type), m_Metrics.TP, epoch)
 
-    (accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+    (accuracy, precision, recall) = m_Metrics.evaluation()
 
     log_writer.add_scalar('{}/Accuracy'.format(type), accuracy, epoch)
     log_writer.add_scalar('{}/precision'.format(type), precision, epoch)
