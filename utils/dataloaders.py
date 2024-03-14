@@ -209,7 +209,7 @@ class LoadImagesAndLabels(Dataset):
 
                 img, kps_xy = self.albumentations(img, kps_xy)
 
-                #augment_hsv(img, hgain=0.015, sgain=0.7, vgain=0.4)
+                augment_hsv(img, hgain=0.015, sgain=0.7, vgain=0.4)
 
                 img, kps_xy = random_flip(img, kps_xy)
 
