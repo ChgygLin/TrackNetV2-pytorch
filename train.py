@@ -38,7 +38,6 @@ def validation_loop(device, model, val_loader, log_writer, epoch):
     with torch.inference_mode():
         pbar = tqdm(val_loader, ncols=180)
         for batch_index, (X, y, _, _) in enumerate(pbar):
-            y = y[:,0,:,:,:]    # [batch][sq][32][h][w]
             X, y = X.to(device), y.to(device)
             y_pred = model(X)
 
@@ -86,7 +85,6 @@ def training_loop(device, model, optimizer, lr_scheduler, train_loader, val_load
         model.train()
         pbar = tqdm(train_loader, ncols=180)
         for batch_index, (X, y, _, _) in enumerate(pbar):
-            y = y[:,0,:,:,:]    # [batch][sq][32][h][w]
             X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
 
@@ -180,6 +178,7 @@ def parse_opt():
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--project', default=ROOT / 'runs/train', help='save results to project/name')
     parser.add_argument('--resume', action='store_true', help='whether load checkpoint for resume')
+    parser.add_argument('--sq', type=int, default=3, help='Use how many pictures to make predictions')
 
     opt = parser.parse_args()
     return opt
@@ -192,6 +191,7 @@ def main(opt):
     batch_size = opt.batch_size
     f_data = str(opt.data)
     imgsz = opt.imgsz
+    sq = opt.sq
 
     start_epoch = 0
 
@@ -203,7 +203,7 @@ def main(opt):
 
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = TrackNet().to(device)
+    model = TrackNet(sq=sq).to(device)
 
     optimizer = torch.optim.Adadelta(model.parameters(), lr=0.99)
 
@@ -227,8 +227,8 @@ def main(opt):
         else:
             print("train from scratch")
 
-    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, sq=1, augment=True, shuffle=True)    # augment: only True in training mode
-    val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size, sq=1)
+    train_loader = create_dataloader(train_path, imgsz, batch_size=batch_size, sq=sq, augment=True, shuffle=True)    # augment: only True in training mode
+    val_loader = create_dataloader(val_path, imgsz, batch_size=batch_size, sq=sq)
 
 
     training_loop(device, model, optimizer, lr_scheduler, train_loader, val_loader, start_epoch, epochs, d_save_dir)
