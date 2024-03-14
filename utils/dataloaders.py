@@ -4,6 +4,8 @@ import torchvision
 from torch.utils.data import Dataset, DataLoader
 
 import os
+import time
+import random
 import cv2
 import json
 import pandas as pd
@@ -176,6 +178,8 @@ class LoadImagesAndLabels(Dataset):
         w = self.imgsz[1]
         h = self.imgsz[0]
 
+        rd_state = random.getstate()
+        rd_seed = time.time()
         for i in range(self.sq):
             image_path = image_dir + "/" + label_data[image_rel_index+i]['image']
             img = cv2.imread(image_path)  # BGR
@@ -198,6 +202,9 @@ class LoadImagesAndLabels(Dataset):
             kps_xy = kps_int[:, :2]    # xy
 
             if self.augment:
+                # 使用系统时间作为种子值, 保证多张图片的增强策略一致
+                random.seed(rd_seed)
+
                 img, kps_xy = random_perspective(img, kps_xy)
 
                 img, kps_xy = self.albumentations(img, kps_xy)
@@ -233,6 +240,8 @@ class LoadImagesAndLabels(Dataset):
             hms_kps.append(hm_kps)
             images_kps.append(kps_int)
             images_name.append(image_path)
+
+        random.setstate(rd_state)
 
         images = torch.concatenate(images)  # 平铺RGB维度
         hms_kps = torch.tensor(np.array(hms_kps), requires_grad=False, dtype=torch.float32)
