@@ -4,6 +4,8 @@ import torchvision
 from torch.utils.data import Dataset, DataLoader
 
 import os
+import time
+import random
 import cv2
 import pandas as pd
 import numpy as np
@@ -153,6 +155,8 @@ class LoadImagesAndLabels(Dataset):
         w = self.imgsz[1]
         h = self.imgsz[0]
 
+        rd_state = random.getstate()
+        rd_seed = time.time()
         for i in range(self.sq):
             #if (int(label_data['frame_num'][image_rel_index+i]) != int(image_rel_index+i)):
             #    print(image_dir)
@@ -177,6 +181,9 @@ class LoadImagesAndLabels(Dataset):
             assert(len(kps_xy) == 1)
 
             if self.augment:
+                # 使用系统时间作为种子值, 保证多张图片的增强策略一致
+                random.seed(rd_seed)
+
                 img, kps_xy = random_perspective(img, kps_xy)
 
                 img, kps_xy = self.albumentations(img, kps_xy)
@@ -209,6 +216,8 @@ class LoadImagesAndLabels(Dataset):
 
             images.append(img)
             heatmaps.append(heatmap)
+
+        random.setstate(rd_state)
 
         images = torch.concatenate(images)  # 平铺RGB维度
         heatmaps = torch.tensor(np.array(heatmaps), requires_grad=False, dtype=torch.float32)
