@@ -66,7 +66,7 @@ python deploy/test_app.py
 
 
 
-## DataSet:
+## Dataset Preparation:
 
 ```
 # TrackNetV2 dataset
