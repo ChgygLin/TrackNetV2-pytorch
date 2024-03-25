@@ -167,9 +167,10 @@ def main(opt):
 
                 if P is not None:
                     imgs[si] = visualize_court(imgs[si], kps)
-                    cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[si])
-                    cv2.imshow(source_name, imgs[si])
-                    cv2.waitKey(1)
+
+                cv2.imwrite('{}/{}.png'.format(img_save_path, count), imgs[si])
+                cv2.imshow(source_name, imgs[si])
+                cv2.waitKey(1)
                 # else:
                     # print("detect frame-{} Error!!!!!!!!!!!!!!!!!!!!!!!".format(count))
                     # cv2.imwrite("./runs/detect/detect-error-{}.jpg".format(count), imgs[0])
