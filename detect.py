@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 
 from models.tracknet import TrackNet
 from utils.general import get_shuttle_position, postprocess_court, visualize_kps, visualize_court
+from utils.dataloaders import ToTensor
 
 # from yolov5 detect.py
 FILE = Path(__file__).resolve()
@@ -104,11 +105,15 @@ def main(opt):
 
         imgs_torch = []
         for img in imgs:
-            # https://www.geeksforgeeks.org/converting-an-image-to-a-torch-tensor-in-python/
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            if True:
+                img = cv2.resize(img, (imgsz[1], imgsz[0]), interpolation=cv2.INTER_LINEAR)
+                img_torch = ToTensor()(img).to(device)
+            else:
+                # https://www.geeksforgeeks.org/converting-an-image-to-a-torch-tensor-in-python/
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-            img_torch = torchvision.transforms.ToTensor()(img).to(device)   # already [0, 1]
-            img_torch = torchvision.transforms.functional.resize(img_torch, imgsz, antialias=True)
+                img_torch = torchvision.transforms.ToTensor()(img).to(device)   # already [0, 1]
+                img_torch = torchvision.transforms.functional.resize(img_torch, imgsz, antialias=True)
 
             imgs_torch.append(img_torch)
 
