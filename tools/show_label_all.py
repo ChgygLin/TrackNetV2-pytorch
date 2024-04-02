@@ -1,0 +1,252 @@
+from pathlib import Path
+import cv2
+import pandas as pd
+import numpy as np
+import os
+import argparse
+import sys
+import time
+import json
+
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[1]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+
+from utils.general import Pcalib, visualize_court, court
+
+# python show_label_all.py ./dataset/match1/videos/1_10_12.mp4 --label dataset/match/labels
+# 若不加label,则会默认从mp4文件同级目录读取
+
+
+# state 0:hidden  1:visible
+state_name = ['HIDDEN', 'VISIBLE']
+
+keybindings = {
+    'next':          [ ord('n') ],
+    'prev':          [ ord('p')],
+
+    'piece_start':   [ ord('s'), ],     # 裁剪开始帧
+    'piece_end':     [ ord('e'), ],     # 裁剪结束帧
+
+    'first_frame':   [ ord('z'), ],
+    'last_frame':    [ ord('x'), ],
+
+    'forward_frames':   [ ord('f'), ],      #   前进36帧
+    'backward_frames':  [ ord('b'), ],      #   后退36帧
+
+    'circle_grow':   [ ord('='), ord('+') ],
+    'circle_shrink': [ ord('-'), ],
+
+    'quit':          [ ord('q'), ],
+}
+
+
+
+class VideoPlayer():
+    def __init__(self, opt) -> None:
+        self.jump = 36
+
+        self.cap = cv2.VideoCapture(opt.video_path)
+        self.width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.bitrate = self.cap.get(cv2.CAP_PROP_BITRATE)
+
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        self.video_path = Path(opt.video_path)
+        self.label_path = Path(opt.label)
+        self.circle_size = 5
+
+        self.window = cv2.namedWindow('Frame', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Frame', 1280, 720)
+
+        _, self.frame = self.cap.read()
+        self.frame_num = 0
+
+        self.piece_start = 0
+        self.piece_end = 0
+
+        assert(os.path.exists(self.label_path))
+        with open(self.label_path) as file:
+            self.label_data = json.load(file)
+
+            # label_data[i]['court']
+            # label_data[i]['shuttle']
+
+        self.display()
+
+
+    def save_piece(self):
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.piece_start)
+
+        out = cv2.VideoWriter('{}_{}.mp4'.format(self.piece_start+1, self.piece_end+1), self.fourcc, self.fps, (self.width, self.height))
+
+        frame_cnt = self.piece_start
+        while frame_cnt <= self.piece_end:
+            ret, frame = self.cap.read()
+            out.write(frame)
+
+            frame_cnt += 1
+        
+        out.release()
+
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_num)
+        print("save piece succefully!")
+
+
+    def display(self):
+        res_frame = self.frame.copy()
+        # res_frame = cv2.putText(res_frame, state_name[self.info['visible'][self.frame_num]], (100, 110), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2, cv2.LINE_AA)
+        res_frame = cv2.putText(res_frame, "Frame: {}/{}".format(int(self.frame_num+1), int(self.frames)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
+        res_frame = cv2.putText(res_frame, "Piece: {}-{}".format(int(self.piece_start+1), int(self.piece_end+1)), (100, 170), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
+
+        vis = self.label_data[self.frame_num]['shuttle'][2]
+        fx = self.label_data[self.frame_num]['shuttle'][0]
+        fy = self.label_data[self.frame_num]['shuttle'][1]
+        if vis:
+            x = int(fx * self.width)
+            y = int(fy * self.height)
+            cv2.circle(res_frame, (x, y), self.circle_size, (0, 0, 255), -1)
+        
+            # print("vis:{}  ({},{})".format(vis, x, y))
+        
+        kps_frac = np.array(self.label_data[self.frame_num]['court'])
+        assert len(kps_frac) == 32
+        kps_int = (kps_frac * np.array([self.width, self.height, 1]).T).astype(int)
+
+        kps_court = np.zeros((32, 6))
+        kps_court[:, :3] = kps_int
+        kps_court[:, 3:6] = court
+
+        selection = kps_court[kps_court[:, 2] == 1]
+        uv = selection[:, :2]
+        xyz = selection[:, 3:6]
+        P, err = Pcalib(xyz, uv)
+
+        uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
+        uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
+
+        kps_int[:, :2] = uv2[:, 0:2]
+        img = visualize_court(res_frame, kps_int)
+
+
+        cv2.imshow('Frame', img)
+
+    #print("frame num: {}".format(self.frame_num))
+    #print(type(self.frame))
+    #assert(ret==True)
+    #    frame_num   0---->frames-1
+    def main_loop(self):
+        key = cv2.waitKeyEx(1)
+        if key in keybindings['first_frame']:
+            self.frame_num = 0
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_num)
+            ret, self.frame = self.cap.read()
+
+            assert(ret==True)
+
+        elif key in keybindings['last_frame']:
+            self.frame_num = self.frames-1                  
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_num)       # cap.set时, frame_num不用加1
+            ret, self.frame = self.cap.read()
+
+            print(type(self.frame))
+            assert(ret==True)
+
+
+        elif key in keybindings['next']:
+            if self.frame_num < self.frames-1:
+                ret, self.frame = self.cap.read()
+                self.frame_num += 1
+
+                assert(ret==True)
+
+        elif key in keybindings['prev']:
+            time.sleep(0.01)
+            if self.frame_num > 0:
+                self.frame_num -= 1
+                self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_num)
+                _, self.frame = self.cap.read()
+
+
+        elif key in keybindings['forward_frames']:
+            if self.frame_num < self.frames-1:
+                for _ in range(self.jump):
+                    if self.frame_num == self.frames-2:      # 倒数第二帧，最后一帧使用read()
+                        break
+
+                    self.cap.grab()                         # cap.grab跳过帧, frame_num加1
+                    self.frame_num += 1
+   
+                ret, self.frame = self.cap.read()
+                self.frame_num += 1
+
+        
+        elif key in keybindings['backward_frames']:
+            if self.frame_num < self.jump:
+                self.frame_num = 0
+            else:
+                self.frame_num -= self.jump
+
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_num)
+            ret, self.frame = self.cap.read()
+
+            assert(ret==True)
+
+
+        elif key in keybindings['circle_grow']:
+            self.circle_size += 1
+        elif key in keybindings['circle_shrink']:
+            self.circle_size -= 1
+
+
+        elif key in keybindings['piece_start']:
+            self.piece_start = self.frame_num
+
+        elif key in keybindings['piece_end']:
+            self.piece_end = self.frame_num
+            self.save_piece()
+
+
+        elif key in keybindings['quit']:
+            self.finish()
+            return
+
+
+        self.display()
+
+
+    def finish(self):
+        self.cap.release()
+        cv2.destroyAllWindows()
+
+
+    def __del__(self):
+        self.finish()
+
+
+def parse_opt():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('video_path', type=str, nargs='?', default=None, help='Path to the video file.')
+    parser.add_argument('--label', type=str, default=None, help='Path to the directory where csv file should be saved. If not specified, csv file will be saved in the same directory as the video file.')
+    opt = parser.parse_args()
+    return opt
+
+
+
+if __name__ == '__main__':
+    opt = parse_opt()
+
+    if opt.label is None:
+        directory, file_name = os.path.split(opt.video_path)
+        new_file_name = file_name.replace(".mp4", "_all.json")
+        opt.label = os.path.join(directory, new_file_name)
+
+    player = VideoPlayer(opt)
+    while(player.cap.isOpened()):
+        player.main_loop()
