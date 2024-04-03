@@ -212,6 +212,7 @@ def postprocess_court(kps, last_P=None, img=None):
     if best_P is not None:
         uv2 = np.dot( best_P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
         uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
+        uv2 = np.clip(uv2, -9999, 9999)
 
         kps[:, :2] = uv2[:, 0:2]
         print(" ")
