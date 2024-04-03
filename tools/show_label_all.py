@@ -58,8 +58,6 @@ class VideoPlayer():
 
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
-        self.video_path = Path(opt.video_path)
-        self.label_path = Path(opt.label)
         self.circle_size = 5
 
         self.window = cv2.namedWindow('Frame', cv2.WINDOW_NORMAL)
@@ -71,12 +69,82 @@ class VideoPlayer():
         self.piece_start = 0
         self.piece_end = 0
 
-        assert(os.path.exists(self.label_path))
-        with open(self.label_path) as file:
-            self.label_data = json.load(file)
+        self.kps_all = []
+        self.ball = []
 
-            # label_data[i]['court']
-            # label_data[i]['shuttle']
+        if opt.label is None:
+            self.ball = pd.read_csv(opt.csv)[['Visibility', 'X', 'Y']].values.astype(int)
+
+            for index in range(self.frames):
+                index_json = os.path.join(opt.court, "{}.json".format(index))
+                if os.path.exists(index_json):
+                    with open(index_json) as file:
+                        data = json.load(file)
+                        kps = []                    # 一张图对应的标签关键点
+                        for _ in range(32):
+                            kps.append([0, 0, 0])
+
+                        for shape in data["shapes"]:
+                            index = shape["label"]
+                            point = shape["points"][0]  # 嵌套了list
+
+                            point.append(1) # visible
+
+                            index = int(index) - 1      # 标注时使用1-32， 替换为0-31
+                            assert index <= 31 and index >= 0
+
+                            kps[index] = point
+
+                        kps_int = np.array(kps).astype(int)
+                        kps_court = np.zeros((32, 6), dtype=np.float32)
+                        kps_court[:, :3] = kps_int
+                        kps_court[:, 3:6] = court
+
+                        selection = kps_court[kps_court[:, 2] == 1]
+                        uv = selection[:, :2]
+                        xyz = selection[:, 3:6]
+                        P, err = Pcalib(xyz, uv)
+
+                        uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
+                        uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
+                        uv2 = np.clip(uv2, -9999, 9999)
+
+                        kps_int[:, :2] = uv2[:, 0:2]
+                        self.kps_all.append(kps_int)
+                else:
+                    print("warning: {} is not found".format(index_json))
+                    self.kps_all.append(None)
+        else:
+            assert(os.path.exists(opt.label))
+            with open(opt.label) as file:
+                self.label_data = json.load(file)
+
+                for index in range(self.frames):
+                    x = int(self.label_data[index]['shuttle'][0]*self.width)
+                    y = int(self.label_data[index]['shuttle'][1]*self.height)
+                    vis = int(self.label_data[index]['shuttle'][2])
+
+                    self.ball.append([vis, x, y])
+
+                    kps_frac = np.array(self.label_data[index]['court'])
+                    assert len(kps_frac) == 32
+                    kps_int = (kps_frac * np.array([self.width, self.height, 1]).T).astype(int)
+
+                    kps_court = np.zeros((32, 6))
+                    kps_court[:, :3] = kps_int
+                    kps_court[:, 3:6] = court
+
+                    selection = kps_court[kps_court[:, 2] == 1]
+                    uv = selection[:, :2]
+                    xyz = selection[:, 3:6]
+                    P, err = Pcalib(xyz, uv)
+
+                    uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
+                    uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
+                    uv2 = np.clip(uv2, -9999, 9999)
+
+                    kps_int[:, :2] = uv2[:, 0:2]
+                    self.kps_all.append(kps_int)
 
         self.display()
 
@@ -102,44 +170,21 @@ class VideoPlayer():
     def display(self):
         res_frame = self.frame.copy()
         # res_frame = cv2.putText(res_frame, state_name[self.info['visible'][self.frame_num]], (100, 110), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2, cv2.LINE_AA)
-        res_frame = cv2.putText(res_frame, "Frame: {}/{}".format(int(self.frame_num+1), int(self.frames)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
-        res_frame = cv2.putText(res_frame, "Piece: {}-{}".format(int(self.piece_start+1), int(self.piece_end+1)), (100, 170), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
+        res_frame = cv2.putText(res_frame, "Frame: {}/{}".format(int(self.frame_num+1), int(self.frames)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        # res_frame = cv2.putText(res_frame, "Piece: {}-{}".format(int(self.piece_start+1), int(self.piece_end+1)), (100, 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
-        vis = self.label_data[self.frame_num]['shuttle'][2]
-        fx = self.label_data[self.frame_num]['shuttle'][0]
-        fy = self.label_data[self.frame_num]['shuttle'][1]
+        vis = self.ball[self.frame_num][0]
+        x = self.ball[self.frame_num][1]
+        y = self.ball[self.frame_num][2]
         if vis:
-            x = int(fx * self.width)
-            y = int(fy * self.height)
             cv2.circle(res_frame, (x, y), self.circle_size, (0, 0, 255), -1)
         
-            # print("vis:{}  ({},{})".format(vis, x, y))
-        
-        kps_frac = np.array(self.label_data[self.frame_num]['court'])
-        assert len(kps_frac) == 32
-        kps_int = (kps_frac * np.array([self.width, self.height, 1]).T).astype(int)
-
-        kps_court = np.zeros((32, 6))
-        kps_court[:, :3] = kps_int
-        kps_court[:, 3:6] = court
-
-        selection = kps_court[kps_court[:, 2] == 1]
-        uv = selection[:, :2]
-        xyz = selection[:, 3:6]
-        P, err = Pcalib(xyz, uv)
-
-        uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
-        uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
-
-        kps_int[:, :2] = uv2[:, 0:2]
-        img = visualize_court(res_frame, kps_int)
-
+        kps_int = self.kps_all[self.frame_num]
+        if kps_int is not None:
+            img = visualize_court(res_frame, kps_int)
 
         cv2.imshow('Frame', img)
 
-    #print("frame num: {}".format(self.frame_num))
-    #print(type(self.frame))
-    #assert(ret==True)
     #    frame_num   0---->frames-1
     def main_loop(self):
         key = cv2.waitKeyEx(1)
@@ -233,7 +278,9 @@ class VideoPlayer():
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('video_path', type=str, nargs='?', default=None, help='Path to the video file.')
-    parser.add_argument('--label', type=str, default=None, help='Path to the directory where csv file should be saved. If not specified, csv file will be saved in the same directory as the video file.')
+    parser.add_argument('--label', type=str, default=None, help='Path to the directory where all file should be saved. If not specified, csv file will be saved in the same directory as the video file.')
+    parser.add_argument('--court', type=str, default=None, help='Path to the directory where court file should be saved. If not specified, csv file will be saved in the same directory as the video file.')
+    parser.add_argument('--csv', type=str, default=None, help='Path to the directory where shuttle file should be saved. If not specified, csv file will be saved in the same directory as the video file.')
     opt = parser.parse_args()
     return opt
 
@@ -245,7 +292,19 @@ if __name__ == '__main__':
     if opt.label is None:
         directory, file_name = os.path.split(opt.video_path)
         new_file_name = file_name.replace(".mp4", "_all.json")
+
         opt.label = os.path.join(directory, new_file_name)
+        if os.path.exists(opt.label) == False:
+            opt.label = None
+
+    if opt.label is None:
+        assert(opt.court is not None)
+        directory, file_name = os.path.split(opt.video_path)
+        opt.court = os.path.join(opt.court, file_name.split(".")[0])
+
+        if opt.csv is None:
+            opt.csv = Path(opt.video_path).with_suffix('.csv')
+            assert(os.path.exists(opt.csv))
 
     player = VideoPlayer(opt)
     while(player.cap.isOpened()):
