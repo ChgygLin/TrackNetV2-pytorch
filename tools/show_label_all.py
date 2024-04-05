@@ -75,10 +75,10 @@ class VideoPlayer():
         if opt.label is None:
             self.ball = pd.read_csv(opt.csv)[['Visibility', 'X', 'Y']].values.astype(int)
 
-            for index in range(self.frames):
-                index_json = os.path.join(opt.court, "{}.json".format(index))
-                if os.path.exists(index_json):
-                    with open(index_json) as file:
+            for num in range(self.frames):
+                num_json = os.path.join(opt.court, "{}.json".format(num))
+                if os.path.exists(num_json):
+                    with open(num_json) as file:
                         data = json.load(file)
                         kps = []                    # 一张图对应的标签关键点
                         for _ in range(32):
@@ -112,7 +112,7 @@ class VideoPlayer():
                         kps_int[:, :2] = uv2[:, 0:2]
                         self.kps_all.append(kps_int)
                 else:
-                    print("warning: {} is not found".format(index_json))
+                    print("warning: {} is not found".format(num_json))
                     self.kps_all.append(None)
         else:
             assert(os.path.exists(opt.label))
