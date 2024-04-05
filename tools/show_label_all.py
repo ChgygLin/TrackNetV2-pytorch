@@ -42,7 +42,6 @@ keybindings = {
 }
 
 
-
 class VideoPlayer():
     def __init__(self, opt) -> None:
         self.jump = 36
@@ -69,7 +68,8 @@ class VideoPlayer():
         self.piece_start = 0
         self.piece_end = 0
 
-        self.kps_all = []
+        self.Ps = []
+        self.kps_all_ori = []
         self.ball = []
 
         if opt.label is None:
@@ -94,26 +94,35 @@ class VideoPlayer():
                             assert index <= 31 and index >= 0
 
                             kps[index] = point
+                        
+                        self.kps_all_ori.append(kps)
 
-                        kps_int = np.array(kps).astype(int)
-                        kps_court = np.zeros((32, 6), dtype=np.float32)
-                        kps_court[:, :3] = kps_int
-                        kps_court[:, 3:6] = court
+                        if kps[30][2]==0 or kps[31][2]==0:
+                            self.Ps.append(None)
+                        else:
+                            kps_int = np.array(kps).astype(int)
+                            kps_court = np.zeros((32, 6), dtype=np.float32)
+                            kps_court[:, :3] = kps_int
+                            kps_court[:, 3:6] = court
 
-                        selection = kps_court[kps_court[:, 2] == 1]
-                        uv = selection[:, :2]
-                        xyz = selection[:, 3:6]
-                        P, err = Pcalib(xyz, uv)
+                            selection = kps_court[kps_court[:, 2] == 1]
+                            uv = selection[:, :2]
+                            xyz = selection[:, 3:6]
+                            P, err = Pcalib(xyz, uv)
 
-                        uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
-                        uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
-                        uv2 = np.clip(uv2, -9999, 9999)
+                            self.Ps.append(P)
 
-                        kps_int[:, :2] = uv2[:, 0:2]
-                        self.kps_all.append(kps_int)
+                            # uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
+                            # uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
+                            # uv2 = np.clip(uv2, -9999, 9999)
+
+                            # kps_int[:, :2] = uv2[:, 0:2]
+                            # self.kps_all.append(kps_int)
                 else:
                     print("warning: {} is not found".format(num_json))
-                    self.kps_all.append(None)
+                    self.Ps.append(None)
+                    self.kps_all_ori.append(None)
+
         else:
             assert(os.path.exists(opt.label))
             with open(opt.label) as file:
@@ -170,7 +179,11 @@ class VideoPlayer():
     def display(self):
         res_frame = self.frame.copy()
         # res_frame = cv2.putText(res_frame, state_name[self.info['visible'][self.frame_num]], (100, 110), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2, cv2.LINE_AA)
-        res_frame = cv2.putText(res_frame, "Frame: {}/{}".format(int(self.frame_num+1), int(self.frames)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        res_frame = cv2.putText(res_frame, "Frame: {}/{}".format(int(self.frame_num), int(self.frames-1)), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.circle(res_frame, (50, 70), 3, (0, 255, 0), -1)
+        res_frame = cv2.putText(res_frame, "Current frame", (70, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.circle(res_frame, (50, 100), 3, (0, 255, 255), -1)
+        res_frame = cv2.putText(res_frame, "Previous frame", (70, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2, cv2.LINE_AA)
         # res_frame = cv2.putText(res_frame, "Piece: {}-{}".format(int(self.piece_start+1), int(self.piece_end+1)), (100, 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
         vis = self.ball[self.frame_num][0]
@@ -178,12 +191,36 @@ class VideoPlayer():
         y = self.ball[self.frame_num][2]
         if vis:
             cv2.circle(res_frame, (x, y), self.circle_size, (0, 0, 255), -1)
-        
-        kps_int = self.kps_all[self.frame_num]
-        if kps_int is not None:
-            img = visualize_court(res_frame, kps_int)
 
-        cv2.imshow('Frame', img)
+        P = self.Ps[self.frame_num]
+        kps_int = self.kps_all_ori[self.frame_num]
+        if kps_int is not None:
+            if P is not None:
+                kps_int = np.array(self.kps_all_ori[self.frame_num]).astype(np.int32)
+
+                uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
+                uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
+                uv2 = np.clip(uv2, -9999, 9999)
+
+                kps_int[:, :2] = uv2[:, 0:2]
+                res_frame = visualize_court(res_frame, kps_int)
+            else:
+                if self.frame_num >= 1:
+                    kps_int = np.array(self.kps_all_ori[self.frame_num]).astype(np.int32)
+                    kps_int_pre = np.array(self.kps_all_ori[self.frame_num-1]).astype(np.int32)
+
+                    for i in range(32):
+                        x, y, v = kps_int[i][0], kps_int[i][1], kps_int[i][2]
+                        xo, yo, vo = kps_int_pre[i][0], kps_int_pre[i][1], kps_int_pre[i][2]
+
+                        if v:
+                            cv2.circle(res_frame, (x, y), 3, (0, 255, 0), -1)
+                        if vo:
+                            cv2.circle(res_frame, (xo, yo), 3, (0, 255, 255), -1)
+                        if v and vo:
+                            cv2.line(res_frame, (x, y), (xo, yo), (0, 0, 255), 2)
+
+        cv2.imshow('Frame', res_frame)
 
     #    frame_num   0---->frames-1
     def main_loop(self):
