@@ -97,12 +97,12 @@ def fit_3d_2d(kps_int, num, Ps):
 
     if kps_int[30][2]==0 or kps_int[31][2]==0:
         if num == 0:
-            initial_guess_P = None
+            initial_guess_P = np.eye(3,4).ravel()
         else:
             if Ps[-1] is not None:
                 initial_guess_P = Ps[-1].ravel()
             else:
-                initial_guess_P = None
+                initial_guess_P = np.eye(3,4).ravel()
 
         result = scipy.optimize.minimize(reprojection_error, initial_guess_P, args=(xyz, uv))
         P = result.x.reshape(3, 4)
