@@ -133,7 +133,7 @@ if __name__ == "__main__":
         exit(1)
           
     # folder_path = "xxx/match/court1"
-    # merge_dir_labels(folder_path)
+    # merge_dir_labels(base_path)
     
 
     # merge_dir_labels_batch(base_path)
