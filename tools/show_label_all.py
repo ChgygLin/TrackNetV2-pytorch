@@ -249,7 +249,7 @@ class VideoPlayer():
 
             cv2.circle(res_frame, (x, y), 3, COLOR_calc, -1)
             cv2.circle(res_frame, (xo, yo), 3, COLOR_label, -1)
-            res_frame = cv2.putText(res_frame, "{}-{:.1f}".format(int(label_index), err), (x+5, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255))
+            res_frame = cv2.putText(res_frame, "{}-{:.1f}".format(int(label_index)+1, err), (x+5, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255))
             print("frame: {} label index:{}, label pos:({},{}), calc pos:({},{}), err pix:{:.1f}".format(self.frame_num, int(label_index)+1, xo, yo, x, y, err))
 
         cv2.imshow('Frame', res_frame)
