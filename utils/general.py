@@ -229,6 +229,7 @@ def visualize_kps(img, kps):    # x_int, y_int, visible
         cx, cy, visible = kps[index][0], kps[index][1], kps[index][2]
 
         if visible:
+            im = cv2.putText(im, f"{index+1}", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
             cv2.circle(im, (cx, cy), 3, (0,0,255), -1)
 
     return im
@@ -271,6 +272,9 @@ def visualize_court(img, kps):    # x_int, y_int, visible
 
     new_size = np.max(kps_tmp, axis=0)
     new_size = np.maximum(new_size, np.array([delta_x+w, delta_y+h]))
+
+    if new_size[0] >9999 or new_size[1] > 9999:
+        return visualize_kps(img, kps)
 
     new_image = np.zeros((new_size[1], new_size[0], 3), dtype=np.uint8)
     new_image[delta_y:(delta_y+h), delta_x:(delta_x+w)] = im

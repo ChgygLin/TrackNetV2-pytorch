@@ -235,7 +235,6 @@ class VideoPlayer():
         kps_int = np.array(self.kps_all_ori[self.frame_num]).astype(np.int32)
         uv2 = np.dot( P, np.concatenate( (court.T, np.ones((1, len(court)))) ) )
         uv2 = np.array((uv2 / uv2[2, :]).T).astype(np.int32)
-        uv2 = np.clip(uv2, -9999, 9999)
         kps_int[:, :2] = uv2[:, 0:2]
 
         res_frame = visualize_court(res_frame, kps_int)
