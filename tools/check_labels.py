@@ -4,9 +4,7 @@ import json
 import pandas as pd
 import numpy as np
 
-# 基本的数据校验
-
-base_path = "/home/chg/Documents/Badminton/merge_dataset/TrackNetV2/"
+import argparse
 
 
 # Amateur/match1
@@ -42,7 +40,7 @@ def handle_rally(match_path):
 
         print(csv_dir)
         df = pd.read_csv(csv_dir)
-        frame_nums = df["frame_num"].values
+        frame_nums = df["Frame"].values
 
         assert(np.all(np.ediff1d(frame_nums) == 1))
 
@@ -66,4 +64,14 @@ def handle_base_path(base_path):
         handle_rally_batch(to_batch_path)
 
 
-handle_base_path(base_path)
+def parse_opt():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('imgs_base', type=str, default=None, help='Path to the imgs dir.')
+    opt = parser.parse_args()
+    return opt
+
+if __name__ == '__main__':
+    opt = parse_opt()
+    assert(opt.imgs_base is not None)
+
+    handle_rally_batch(opt.imgs_base)
