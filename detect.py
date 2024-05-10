@@ -80,7 +80,8 @@ def main(opt):
 
     if b_save_txt:
         f_save_txt = open('{}/{}.json'.format(d_save_dir, source_name), 'w')
-        js_court_data = []
+        js_court_kps_data = []
+        js_court_P_data = []
         js_shuttle_data = []
 
     if b_view_img:
@@ -140,12 +141,13 @@ def main(opt):
             # import time
             # t1 = time.time()
             kps_court = kps[:32, :]
-            kps_court, P = postprocess_court(kps_court, last_P=P, img=imgs[si])
+            _, P = postprocess_court(kps_court.copy(), last_P=P, img=imgs[si])
             # t2 = time.time()
             # print("postprocess_court: {}ms".format(t2-t1))
 
             if b_save_txt:
                 court_data = {}
+                court_kps_data = {}
 
                 court_data['frame_num'] = count
                 if P is not None:
@@ -155,7 +157,11 @@ def main(opt):
                     court_data['visible'] = 0
                     court_data['P'] = np.zeros((3, 4)).tolist()
 
-                js_court_data.append(court_data)
+                court_kps_data['frame_num'] = count
+                court_kps_data['kps'] = kps_court.tolist()
+
+                js_court_P_data.append(court_data)
+                js_court_kps_data.append(court_kps_data)
 
                 shuttle_data = {}
                 shuttle_data["frame_num"] = count
@@ -195,7 +201,8 @@ def main(opt):
         #     count += 1
 
         js_all_data = {}
-        js_all_data["court"] = js_court_data
+        js_all_data["court_P"] = js_court_P_data
+        js_all_data["court_kps"] = js_court_kps_data
         js_all_data["shuttle"] = js_shuttle_data
 
         json.dump(js_all_data, f_save_txt)
