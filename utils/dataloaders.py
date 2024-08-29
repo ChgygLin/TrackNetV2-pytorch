@@ -176,7 +176,7 @@ class LoadImagesAndLabels(Dataset):
             x = label_data['x'][image_rel_index+i]
             y = label_data['y'][image_rel_index+i]
 
-            kps_int = np.array([int(w*x), int(h*y), visible]).reshape(1, -1)
+            kps_int = np.array([int(w*x), int(h*y), int(visible)]).reshape(1, -1)
             kps_xy = kps_int[:, :2]
             assert(len(kps_xy) == 1)
 
