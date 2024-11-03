@@ -64,6 +64,11 @@ def main(opt):
     model.load_state_dict(torch.load(f_weights))
     model.eval()
 
+    # import ncnn
+    # net = ncnn.Net()
+    # net.load_param("./pt_30_optimize.ncnn.param")
+    # net.load_model("./pt_30_optimize.ncnn.bin")
+
     vid_cap = cv2.VideoCapture(f_source)
     video_end = False
 
@@ -111,6 +116,12 @@ def main(opt):
 
         preds = model(imgs_torch)
         preds = preds[0].detach().cpu().numpy()
+
+        # ncnn
+        # ex = net.create_extractor()
+        # ex.input("in0", ncnn.Mat(imgs_torch.squeeze(0).numpy()).clone())
+        # _, out0 = ex.extract("out0")
+        # preds = np.array(out0)
 
         y_preds = preds > 0.5
         y_preds = y_preds.astype('float32')
